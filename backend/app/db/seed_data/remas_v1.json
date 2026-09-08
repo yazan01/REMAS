@@ -1,0 +1,260 @@
+{
+  "framework": {
+    "code": "REMAS",
+    "name_ar": "تقييم النضج المؤسسي للمطوّرين العقاريين",
+    "name_en": "Real Estate Developer Maturity Assessment",
+    "description_ar": "إطار يقيس النضج المؤسسي وجاهزية المطوّر العقاري عبر سلسلة القيمة الكاملة.",
+    "description_en": "A framework measuring the institutional maturity and readiness of a real estate developer across the full value chain."
+  },
+  "version": "1.0-draft",
+  "source_note": "محتوى مبدئي لأغراض التطوير والاختبار — يُستبدل بالكامل بملف المحتوى الرئيسي المعتمد من iValue (16 محوراً و160 سؤالاً) عند تسليمه. PLACEHOLDER CONTENT — to be replaced by iValue's approved master content file.",
+  "maturity_levels": [
+    {"score": 1, "label_ar": "تأسيسي", "label_en": "Initial", "description_ar": "لا توجد ممارسات منهجية.", "description_en": "No systematic practices exist."},
+    {"score": 2, "label_ar": "ناشئ", "label_en": "Developing", "description_ar": "ممارسات متفرقة وغير رسمية، مع محاولات لتنظيم العمل.", "description_en": "Scattered and informal practices, with attempts to organise work."},
+    {"score": 3, "label_ar": "مُعرَّف", "label_en": "Defined", "description_ar": "تطبيق منظّم جزئياً، مع بعض الفجوات التي تحتاج تحسيناً.", "description_en": "Partially organised implementation, with some gaps that need improvement."},
+    {"score": 4, "label_ar": "مُدار", "label_en": "Managed", "description_ar": "ممارسات منهجية، مع متابعة دورية وتحسين تدريجي.", "description_en": "Systematic practices, with periodic monitoring and gradual improvement."},
+    {"score": 5, "label_ar": "متميّز", "label_en": "Distinguished", "description_ar": "ممارسات متكاملة قائمة على القياس والتحسين المستمر.", "description_en": "Integrated practices based on continuous measurement and improvement."}
+  ],
+  "axes": [
+    {
+      "code": "AX01",
+      "name_ar": "الحوكمة المؤسسية والامتثال",
+      "name_en": "Corporate Governance & Compliance",
+      "description_ar": "وضوح الصلاحيات وانتظام الحوكمة والالتزام بالمتطلبات التنظيمية العقارية.",
+      "description_en": "Clarity of authorities, regularity of governance, and compliance with real estate regulatory requirements.",
+      "weight": 1.2,
+      "questions": [
+        {"code": "AX01-Q1", "text_ar": "هل يوجد ميثاق حوكمة معتمد يحدد صلاحيات مجلس الإدارة والإدارة التنفيذية؟", "text_en": "Is there an approved governance charter defining the authorities of the board and executive management?", "evidence_hint_ar": "ميثاق الحوكمة المعتمد", "evidence_hint_en": "Approved governance charter", "evidence_required": true, "weight": 1.5},
+        {"code": "AX01-Q2", "text_ar": "ما مدى انتظام انعقاد مجلس الإدارة ولجانه وتوثيق قراراته ومتابعة تنفيذها؟", "text_en": "How regularly do the board and its committees convene, with decisions documented and tracked to closure?", "evidence_hint_ar": "محاضر اجتماعات وسجل متابعة القرارات", "evidence_hint_en": "Meeting minutes and decision tracking log", "evidence_required": true, "weight": 1.0},
+        {"code": "AX01-Q3", "text_ar": "هل توجد مصفوفة صلاحيات معتمدة ومحدّثة تغطي القرارات المالية والتشغيلية؟", "text_en": "Is there an approved and current delegation-of-authority matrix covering financial and operational decisions?", "evidence_hint_ar": "مصفوفة الصلاحيات المعتمدة", "evidence_hint_en": "Approved delegation-of-authority matrix", "evidence_required": true, "weight": 1.2},
+        {"code": "AX01-Q4", "text_ar": "هل توجد آلية معتمدة للإفصاح عن تعارض المصالح وإدارته؟", "text_en": "Is there an approved mechanism for disclosing and managing conflicts of interest?", "evidence_hint_ar": "سياسة تعارض المصالح وسجل الإفصاحات", "evidence_hint_en": "Conflict-of-interest policy and disclosure register", "weight": 1.0},
+        {"code": "AX01-Q5", "text_ar": "كيف تُتابع المنشأة امتثالها للمتطلبات التنظيمية العقارية الحكومية وتوثّق أدلته؟", "text_en": "How does the organisation monitor and evidence its compliance with government real estate regulatory requirements?", "evidence_hint_ar": "سجل الامتثال والتراخيص السارية", "evidence_hint_en": "Compliance register and valid licences", "evidence_required": true, "weight": 1.4}
+      ]
+    },
+    {
+      "code": "AX02",
+      "name_ar": "الاستراتيجية والتخطيط المؤسسي",
+      "name_en": "Strategy & Corporate Planning",
+      "description_ar": "وجود اتجاه استراتيجي معتمد وقابل للقياس ومترجَم إلى خطط تنفيذية.",
+      "description_en": "An approved, measurable strategic direction translated into executable plans.",
+      "weight": 1.2,
+      "questions": [
+        {"code": "AX02-Q1", "text_ar": "هل توجد خطة استراتيجية معتمدة بأهداف محددة وقابلة للقياس ومحددة زمنياً؟", "text_en": "Is there an approved strategic plan with specific, measurable and time-bound objectives?", "evidence_hint_ar": "وثيقة الخطة الاستراتيجية المعتمدة", "evidence_hint_en": "Approved strategic plan document", "evidence_required": true, "weight": 1.5},
+        {"code": "AX02-Q2", "text_ar": "إلى أي مدى ترتبط الخطة الاستراتيجية بالموازنة السنوية وخطط المشاريع؟", "text_en": "To what extent is the strategic plan linked to the annual budget and project plans?", "evidence_hint_ar": "وثيقة ربط الأهداف بالموازنة", "evidence_hint_en": "Objective-to-budget linkage document", "weight": 1.2},
+        {"code": "AX02-Q3", "text_ar": "هل توجد مؤشرات أداء مؤسسية تُقاس وتُراجع دورياً على مستوى الإدارة العليا؟", "text_en": "Are corporate KPIs measured and reviewed periodically at senior management level?", "evidence_hint_ar": "لوحة مؤشرات الأداء وتقارير المراجعة", "evidence_hint_en": "KPI dashboard and review reports", "evidence_required": true, "weight": 1.3},
+        {"code": "AX02-Q4", "text_ar": "كيف تُراجَع الخطة الاستراتيجية وتُحدَّث استجابةً لمتغيرات السوق؟", "text_en": "How is the strategic plan reviewed and updated in response to market changes?", "evidence_hint_ar": "محاضر مراجعة الاستراتيجية", "evidence_hint_en": "Strategy review minutes", "weight": 1.0},
+        {"code": "AX02-Q5", "text_ar": "ما مدى إيصال الاستراتيجية وأهدافها إلى كل المستويات التنظيمية؟", "text_en": "How well is the strategy and its objectives communicated across all organisational levels?", "evidence_hint_ar": "خطة التواصل الداخلي ومواد الإيصال", "evidence_hint_en": "Internal communication plan and materials", "weight": 0.8}
+      ]
+    },
+    {
+      "code": "AX03",
+      "name_ar": "إدارة المخاطر واستمرارية الأعمال",
+      "name_en": "Risk Management & Business Continuity",
+      "description_ar": "تحديد المخاطر وتقييمها ومعالجتها واستمرارية النشاط عند الاضطراب.",
+      "description_en": "Identifying, assessing and treating risk, and sustaining operations through disruption.",
+      "weight": 1.1,
+      "questions": [
+        {"code": "AX03-Q1", "text_ar": "هل يوجد سجل مخاطر مؤسسي محدّث يغطي المخاطر الاستراتيجية والتشغيلية والمالية؟", "text_en": "Is there a maintained enterprise risk register covering strategic, operational and financial risk?", "evidence_hint_ar": "سجل المخاطر المؤسسي", "evidence_hint_en": "Enterprise risk register", "evidence_required": true, "weight": 1.4},
+        {"code": "AX03-Q2", "text_ar": "هل توجد منهجية معتمدة لتقييم المخاطر وتصنيفها حسب الأثر والاحتمالية؟", "text_en": "Is there an approved methodology for assessing and classifying risk by impact and likelihood?", "evidence_hint_ar": "منهجية إدارة المخاطر", "evidence_hint_en": "Risk management methodology", "weight": 1.2},
+        {"code": "AX03-Q3", "text_ar": "هل توجد خطط استجابة وتخفيف معتمدة للمخاطر عالية الأثر مع مالك لكل خطة؟", "text_en": "Are there approved response and mitigation plans for high-impact risks, each with a named owner?", "evidence_hint_ar": "خطط معالجة المخاطر", "evidence_hint_en": "Risk treatment plans", "weight": 1.2},
+        {"code": "AX03-Q4", "text_ar": "ما مدى انتظام رفع تقارير المخاطر إلى الإدارة العليا ومجلس الإدارة؟", "text_en": "How regularly is risk reported to senior management and the board?", "evidence_hint_ar": "تقارير المخاطر الدورية", "evidence_hint_en": "Periodic risk reports", "weight": 1.0},
+        {"code": "AX03-Q5", "text_ar": "هل توجد خطط معتمدة لاستمرارية الأعمال واستعادة النشاط ومُختبَرة دورياً؟", "text_en": "Are there approved business continuity and recovery plans that are periodically tested?", "evidence_hint_ar": "خطة استمرارية الأعمال وتقرير الاختبار", "evidence_hint_en": "Business continuity plan and test report", "weight": 1.1}
+      ]
+    },
+    {
+      "code": "AX04",
+      "name_ar": "الهيكل التنظيمي ورأس المال البشري",
+      "name_en": "Organisation & Human Capital",
+      "description_ar": "وضوح الأدوار وكفاءة الاستقطاب وإدارة الأداء وتنمية القدرات.",
+      "description_en": "Role clarity, effective recruitment, performance management and capability development.",
+      "weight": 1.0,
+      "questions": [
+        {"code": "AX04-Q1", "text_ar": "هل يوجد هيكل تنظيمي معتمد مدعوم بأوصاف وظيفية محدّثة لكل دور؟", "text_en": "Is there an approved organisation structure supported by current job descriptions for every role?", "evidence_hint_ar": "الهيكل التنظيمي والأوصاف الوظيفية", "evidence_hint_en": "Organisation chart and job descriptions", "evidence_required": true, "weight": 1.3},
+        {"code": "AX04-Q2", "text_ar": "هل توجد خطة استقطاب وتخطيط قوى عاملة مرتبطة بخطط المشاريع؟", "text_en": "Is there a recruitment and workforce plan linked to the project pipeline?", "evidence_hint_ar": "خطة القوى العاملة", "evidence_hint_en": "Workforce plan", "weight": 1.0},
+        {"code": "AX04-Q3", "text_ar": "هل يوجد نظام إدارة أداء يربط أهداف الموظف بأهداف المنشأة؟", "text_en": "Is there a performance management system linking individual objectives to corporate objectives?", "evidence_hint_ar": "سياسة إدارة الأداء ونماذج التقييم", "evidence_hint_en": "Performance management policy and appraisal forms", "evidence_required": true, "weight": 1.2},
+        {"code": "AX04-Q4", "text_ar": "هل توجد خطط تدريب وتطوير قدرات مبنية على تحليل الفجوات؟", "text_en": "Are there training and capability development plans built on a gap analysis?", "evidence_hint_ar": "خطة التدريب السنوية", "evidence_hint_en": "Annual training plan", "weight": 1.0},
+        {"code": "AX04-Q5", "text_ar": "هل توجد خطط إحلال وتعاقب وظيفي للأدوار الحرجة؟", "text_en": "Are there succession plans for critical roles?", "evidence_hint_ar": "خطة التعاقب الوظيفي", "evidence_hint_en": "Succession plan", "weight": 0.9}
+      ]
+    },
+    {
+      "code": "AX05",
+      "name_ar": "التخطيط المالي وإدارة رأس المال",
+      "name_en": "Financial Planning & Capital Management",
+      "description_ar": "انضباط الموازنة والنمذجة المالية وإدارة السيولة والتمويل.",
+      "description_en": "Budget discipline, financial modelling, liquidity and funding management.",
+      "weight": 1.3,
+      "questions": [
+        {"code": "AX05-Q1", "text_ar": "هل توجد موازنة سنوية معتمدة تُتابع انحرافاتها دورياً؟", "text_en": "Is there an approved annual budget with periodic variance tracking?", "evidence_hint_ar": "الموازنة المعتمدة وتقارير الانحراف", "evidence_hint_en": "Approved budget and variance reports", "evidence_required": true, "weight": 1.4},
+        {"code": "AX05-Q2", "text_ar": "هل يُبنى نموذج مالي لكل مشروع يتضمن تحليل حساسية للسيناريوهات؟", "text_en": "Is a financial model with scenario sensitivity analysis built for each project?", "evidence_hint_ar": "النموذج المالي لمشروع نموذجي", "evidence_hint_en": "Financial model for a representative project", "evidence_required": true, "weight": 1.4},
+        {"code": "AX05-Q3", "text_ar": "كيف تُدار التدفقات النقدية ويُتنبأ بها على مستوى المنشأة والمشاريع؟", "text_en": "How is cash flow managed and forecast at both corporate and project level?", "evidence_hint_ar": "تقرير التدفقات النقدية والتنبؤ", "evidence_hint_en": "Cash flow and forecast report", "weight": 1.3},
+        {"code": "AX05-Q4", "text_ar": "هل يوجد هيكل تمويلي معتمد وإدارة منظّمة لعلاقات الممولين والالتزامات؟", "text_en": "Is there an approved funding structure and managed lender relationships and covenants?", "evidence_hint_ar": "هيكل التمويل واتفاقيات التسهيلات", "evidence_hint_en": "Funding structure and facility agreements", "weight": 1.1},
+        {"code": "AX05-Q5", "text_ar": "هل تُعد قوائم مالية سنوية مدققة من طرف خارجي مستقل؟", "text_en": "Are annual financial statements audited by an independent external auditor?", "evidence_hint_ar": "القوائم المالية المدققة", "evidence_hint_en": "Audited financial statements", "evidence_required": true, "weight": 1.2}
+      ]
+    },
+    {
+      "code": "AX06",
+      "name_ar": "دراسات الجدوى وأبحاث السوق",
+      "name_en": "Feasibility & Market Research",
+      "description_ar": "جودة القرار الاستثماري قبل الالتزام برأس المال.",
+      "description_en": "The quality of the investment decision before capital is committed.",
+      "weight": 1.2,
+      "questions": [
+        {"code": "AX06-Q1", "text_ar": "هل توجد منهجية معتمدة لدراسات الجدوى تسبق اعتماد أي مشروع؟", "text_en": "Is there an approved feasibility study methodology preceding any project approval?", "evidence_hint_ar": "منهجية دراسات الجدوى", "evidence_hint_en": "Feasibility study methodology", "evidence_required": true, "weight": 1.4},
+        {"code": "AX06-Q2", "text_ar": "هل تُجرى أبحاث سوق دورية عن العرض والطلب ومستويات الأسعار؟", "text_en": "Is periodic market research conducted on supply, demand and price levels?", "evidence_hint_ar": "تقرير أبحاث السوق", "evidence_hint_en": "Market research report", "evidence_required": true, "weight": 1.2},
+        {"code": "AX06-Q3", "text_ar": "هل يوجد تحليل تنافسي موثّق يُحدَّث دورياً؟", "text_en": "Is there a documented competitive analysis that is periodically refreshed?", "evidence_hint_ar": "تحليل المنافسين", "evidence_hint_en": "Competitor analysis", "weight": 1.0},
+        {"code": "AX06-Q4", "text_ar": "هل توجد معايير قبول استثماري معتمدة (عائد، هامش، حدود مخاطرة)؟", "text_en": "Are there approved investment acceptance criteria (return, margin, risk thresholds)?", "evidence_hint_ar": "وثيقة معايير القبول الاستثماري", "evidence_hint_en": "Investment criteria document", "weight": 1.2},
+        {"code": "AX06-Q5", "text_ar": "هل تُجرى مراجعة لاحقة تقارن الأداء الفعلي بافتراضات دراسة الجدوى؟", "text_en": "Is a post-completion review performed comparing actual performance against feasibility assumptions?", "evidence_hint_ar": "تقرير المراجعة اللاحقة", "evidence_hint_en": "Post-completion review report", "weight": 1.1}
+      ]
+    },
+    {
+      "code": "AX07",
+      "name_ar": "تملّك الأراضي والتطوير العمراني",
+      "name_en": "Land Acquisition & Development",
+      "description_ar": "انضباط تملّك الأراضي والعناية الواجبة وإدارة المحفظة والتراخيص.",
+      "description_en": "Discipline in land acquisition, due diligence, portfolio management and permitting.",
+      "weight": 1.1,
+      "questions": [
+        {"code": "AX07-Q1", "text_ar": "هل توجد استراتيجية معتمدة لتملّك الأراضي مرتبطة بالخطة الاستراتيجية؟", "text_en": "Is there an approved land acquisition strategy aligned to the corporate strategy?", "evidence_hint_ar": "استراتيجية تملّك الأراضي", "evidence_hint_en": "Land acquisition strategy", "weight": 1.2},
+        {"code": "AX07-Q2", "text_ar": "هل تُجرى عناية واجبة قانونية وفنية موثّقة قبل كل عملية تملّك؟", "text_en": "Is documented legal and technical due diligence performed before every acquisition?", "evidence_hint_ar": "تقرير العناية الواجبة", "evidence_hint_en": "Due diligence report", "evidence_required": true, "weight": 1.5},
+        {"code": "AX07-Q3", "text_ar": "هل تُدار محفظة الأراضي وتُقيَّم دورياً بمنهجية معتمدة؟", "text_en": "Is the land portfolio managed and valued periodically under an approved methodology?", "evidence_hint_ar": "سجل محفظة الأراضي وتقارير التقييم", "evidence_hint_en": "Land portfolio register and valuation reports", "weight": 1.1},
+        {"code": "AX07-Q4", "text_ar": "كيف تُدار التراخيص والاعتمادات التخطيطية ويُتابع سريانها؟", "text_en": "How are planning permits and approvals managed and their validity tracked?", "evidence_hint_ar": "سجل التراخيص والاعتمادات", "evidence_hint_en": "Permit and approval register", "evidence_required": true, "weight": 1.2},
+        {"code": "AX07-Q5", "text_ar": "هل توجد خطة مراحل معتمدة لتطوير المخططات تراعي الطلب والسيولة؟", "text_en": "Is there an approved phasing plan for land development that accounts for demand and liquidity?", "evidence_hint_ar": "خطة مراحل التطوير", "evidence_hint_en": "Development phasing plan", "weight": 1.0}
+      ]
+    },
+    {
+      "code": "AX08",
+      "name_ar": "التصميم وإدارة المنتج العقاري",
+      "name_en": "Design & Product Management",
+      "description_ar": "تحويل احتياج السوق إلى منتج قابل للبناء ومجدٍ اقتصادياً.",
+      "description_en": "Turning market need into a buildable and economically viable product.",
+      "weight": 1.0,
+      "questions": [
+        {"code": "AX08-Q1", "text_ar": "هل توجد معايير تصميم مؤسسية موحّدة تُطبَّق على كل المشاريع؟", "text_en": "Are there standardised corporate design guidelines applied across all projects?", "evidence_hint_ar": "دليل معايير التصميم", "evidence_hint_en": "Design standards manual", "evidence_required": true, "weight": 1.2},
+        {"code": "AX08-Q2", "text_ar": "هل يُعرَّف المنتج العقاري بناءً على تحليل موثّق لشرائح العملاء؟", "text_en": "Is the product defined on the basis of a documented customer segment analysis?", "evidence_hint_ar": "وثيقة تعريف المنتج وشرائح العملاء", "evidence_hint_en": "Product definition and segmentation document", "weight": 1.2},
+        {"code": "AX08-Q3", "text_ar": "هل تُراجَع قابلية البناء والتكلفة التقديرية في مرحلة التصميم؟", "text_en": "Are constructability and cost estimates reviewed during the design stage?", "evidence_hint_ar": "تقرير مراجعة التصميم والتكلفة", "evidence_hint_en": "Design and cost review report", "weight": 1.3},
+        {"code": "AX08-Q4", "text_ar": "كيف تُدار التغييرات التصميمية ويُقاس أثرها على التكلفة والجدول؟", "text_en": "How are design changes managed and their cost and schedule impact assessed?", "evidence_hint_ar": "سجل التغييرات التصميمية", "evidence_hint_en": "Design change register", "weight": 1.1},
+        {"code": "AX08-Q5", "text_ar": "هل تُجرى دراسات هندسة القيمة بشكل موثّق قبل الطرح للتنفيذ؟", "text_en": "Is documented value engineering performed before tendering for construction?", "evidence_hint_ar": "تقرير هندسة القيمة", "evidence_hint_en": "Value engineering report", "weight": 1.0}
+      ]
+    },
+    {
+      "code": "AX09",
+      "name_ar": "إدارة المشاريع والتنفيذ",
+      "name_en": "Project & Construction Management",
+      "description_ar": "ضبط النطاق والوقت والتكلفة حتى التسليم والإغلاق.",
+      "description_en": "Control of scope, time and cost through handover and close-out.",
+      "weight": 1.4,
+      "questions": [
+        {"code": "AX09-Q1", "text_ar": "هل توجد منهجية إدارة مشاريع معتمدة ومطبَّقة على كل المشاريع؟", "text_en": "Is there an approved project management methodology applied across all projects?", "evidence_hint_ar": "دليل إدارة المشاريع", "evidence_hint_en": "Project management manual", "evidence_required": true, "weight": 1.4},
+        {"code": "AX09-Q2", "text_ar": "هل تُعتمد جداول زمنية أساسية وتُتابع الانحرافات عنها دورياً؟", "text_en": "Are baseline schedules approved and deviations tracked periodically?", "evidence_hint_ar": "الجدول الزمني الأساسي وتقارير التقدم", "evidence_hint_en": "Baseline schedule and progress reports", "evidence_required": true, "weight": 1.4},
+        {"code": "AX09-Q3", "text_ar": "كيف تُضبط تكلفة المشروع وتُدار أوامر التغيير والموافقات عليها؟", "text_en": "How is project cost controlled and how are change orders managed and approved?", "evidence_hint_ar": "تقرير ضبط التكلفة وسجل أوامر التغيير", "evidence_hint_en": "Cost control report and change order log", "weight": 1.3},
+        {"code": "AX09-Q4", "text_ar": "هل تُرفع تقارير أداء دورية للمشاريع تصل إلى الإدارة العليا؟", "text_en": "Are periodic project performance reports produced and escalated to senior management?", "evidence_hint_ar": "تقرير أداء المشاريع", "evidence_hint_en": "Project performance report", "weight": 1.1},
+        {"code": "AX09-Q5", "text_ar": "هل توجد عملية معتمدة للتسليم والإغلاق وإدارة فترة الضمان؟", "text_en": "Is there an approved process for handover, close-out and warranty period management?", "evidence_hint_ar": "إجراءات التسليم والإغلاق", "evidence_hint_en": "Handover and close-out procedure", "weight": 1.1}
+      ]
+    },
+    {
+      "code": "AX10",
+      "name_ar": "سلسلة الإمداد وإدارة المقاولين",
+      "name_en": "Supply Chain & Contractor Management",
+      "description_ar": "تأهيل الموردين والمقاولين وشفافية الترسية وإدارة العقود.",
+      "description_en": "Supplier and contractor prequalification, award transparency and contract management.",
+      "weight": 1.1,
+      "questions": [
+        {"code": "AX10-Q1", "text_ar": "هل يوجد نظام معتمد لتأهيل المقاولين والموردين قبل الدعوة للمنافسة؟", "text_en": "Is there an approved prequalification system for contractors and suppliers before inviting bids?", "evidence_hint_ar": "معايير التأهيل وسجل المؤهلين", "evidence_hint_en": "Prequalification criteria and approved vendor list", "evidence_required": true, "weight": 1.3},
+        {"code": "AX10-Q2", "text_ar": "هل تُدار عملية الترسية بشكل تنافسي موثّق ومحكوم بصلاحيات معتمدة؟", "text_en": "Is the award process competitive, documented and governed by approved authorities?", "evidence_hint_ar": "محاضر التحليل والترسية", "evidence_hint_en": "Bid analysis and award minutes", "evidence_required": true, "weight": 1.3},
+        {"code": "AX10-Q3", "text_ar": "هل يُقيَّم أداء المقاولين دورياً وتُبنى قرارات لاحقة على نتائج التقييم؟", "text_en": "Is contractor performance evaluated periodically and used to inform future awards?", "evidence_hint_ar": "نماذج تقييم أداء المقاولين", "evidence_hint_en": "Contractor performance evaluations", "weight": 1.1},
+        {"code": "AX10-Q4", "text_ar": "كيف تُدار العقود والمطالبات والنزاعات مع المقاولين؟", "text_en": "How are contracts, claims and disputes with contractors managed?", "evidence_hint_ar": "سجل العقود والمطالبات", "evidence_hint_en": "Contract and claims register", "weight": 1.1},
+        {"code": "AX10-Q5", "text_ar": "هل يوجد تخطيط مسبق للمشتريات طويلة الأمد والمواد الحرجة؟", "text_en": "Is there advance planning for long-lead and critical materials procurement?", "evidence_hint_ar": "خطة المشتريات والمواد الحرجة", "evidence_hint_en": "Procurement and long-lead items plan", "weight": 1.0}
+      ]
+    },
+    {
+      "code": "AX11",
+      "name_ar": "الجودة والسلامة والصحة المهنية",
+      "name_en": "Quality, Health & Safety",
+      "description_ar": "ضبط الجودة في الموقع وسلامة العاملين وإغلاق عدم المطابقة.",
+      "description_en": "On-site quality control, worker safety and closure of non-conformances.",
+      "weight": 1.2,
+      "questions": [
+        {"code": "AX11-Q1", "text_ar": "هل يوجد نظام إدارة جودة معتمد ومطبَّق (مثل ISO 9001)؟", "text_en": "Is there an approved and implemented quality management system (e.g. ISO 9001)?", "evidence_hint_ar": "الشهادة أو دليل نظام الجودة", "evidence_hint_en": "Certificate or quality manual", "evidence_required": true, "weight": 1.2},
+        {"code": "AX11-Q2", "text_ar": "هل تُعد خطط جودة على مستوى كل مشروع مع خطة فحوصات واختبارات؟", "text_en": "Are project-level quality plans prepared with an inspection and test plan?", "evidence_hint_ar": "خطة الجودة وخطة الفحص والاختبار", "evidence_hint_en": "Quality plan and inspection & test plan", "evidence_required": true, "weight": 1.3},
+        {"code": "AX11-Q3", "text_ar": "هل يوجد نظام للسلامة والصحة المهنية مع توثيق الحوادث والحوادث الوشيكة؟", "text_en": "Is there an occupational health and safety system recording incidents and near misses?", "evidence_hint_ar": "سجل الحوادث وتقارير السلامة", "evidence_hint_en": "Incident log and safety reports", "evidence_required": true, "weight": 1.4},
+        {"code": "AX11-Q4", "text_ar": "هل تُنفَّذ برامج تدريب سلامة دورية وتُقاس مؤشرات أدائها؟", "text_en": "Are periodic safety training programmes delivered and their performance indicators measured?", "evidence_hint_ar": "سجلات التدريب ومؤشرات السلامة", "evidence_hint_en": "Training records and safety KPIs", "weight": 1.0},
+        {"code": "AX11-Q5", "text_ar": "كيف تُدار حالات عدم المطابقة وتُغلَق بإجراءات تصحيحية جذرية؟", "text_en": "How are non-conformances managed and closed with root-cause corrective actions?", "evidence_hint_ar": "سجل عدم المطابقة والإجراءات التصحيحية", "evidence_hint_en": "NCR and corrective action register", "weight": 1.2}
+      ]
+    },
+    {
+      "code": "AX12",
+      "name_ar": "الاستدامة والالتزام البيئي",
+      "name_en": "Sustainability & Environmental Compliance",
+      "description_ar": "الأثر البيئي وكفاءة الموارد والالتزام بالاشتراطات البيئية.",
+      "description_en": "Environmental impact, resource efficiency and environmental compliance.",
+      "weight": 0.9,
+      "questions": [
+        {"code": "AX12-Q1", "text_ar": "هل توجد سياسة استدامة معتمدة بأهداف قابلة للقياس؟", "text_en": "Is there an approved sustainability policy with measurable targets?", "evidence_hint_ar": "سياسة الاستدامة", "evidence_hint_en": "Sustainability policy", "weight": 1.0},
+        {"code": "AX12-Q2", "text_ar": "هل تلتزم المشاريع بالاشتراطات البيئية وتصاريحها وتُتابع سريانها؟", "text_en": "Do projects comply with environmental requirements and permits, with validity tracked?", "evidence_hint_ar": "التصاريح البيئية وتقارير الالتزام", "evidence_hint_en": "Environmental permits and compliance reports", "evidence_required": true, "weight": 1.3},
+        {"code": "AX12-Q3", "text_ar": "إلى أي مدى تُطبَّق معايير المباني الخضراء في التصميم والتنفيذ؟", "text_en": "To what extent are green building standards applied in design and construction?", "evidence_hint_ar": "شهادات أو تقارير المباني الخضراء", "evidence_hint_en": "Green building certificates or reports", "weight": 1.0},
+        {"code": "AX12-Q4", "text_ar": "هل يُقاس استهلاك الطاقة والمياه والانبعاثات ويُتابع تحسّنه؟", "text_en": "Are energy, water consumption and emissions measured and improvement tracked?", "evidence_hint_ar": "تقارير قياس الاستهلاك", "evidence_hint_en": "Consumption measurement reports", "weight": 0.9},
+        {"code": "AX12-Q5", "text_ar": "هل توجد إدارة موثّقة للنفايات الإنشائية وإعادة التدوير؟", "text_en": "Is construction waste management and recycling documented and managed?", "evidence_hint_ar": "خطة إدارة النفايات الإنشائية", "evidence_hint_en": "Construction waste management plan", "weight": 0.9}
+      ]
+    },
+    {
+      "code": "AX13",
+      "name_ar": "التسويق والمبيعات",
+      "name_en": "Marketing & Sales",
+      "description_ar": "فعالية القنوات وانضباط التسعير والامتثال في عقود البيع.",
+      "description_en": "Channel effectiveness, pricing discipline and compliance in sales contracts.",
+      "weight": 1.1,
+      "questions": [
+        {"code": "AX13-Q1", "text_ar": "هل توجد خطة تسويقية معتمدة لكل مشروع بأهداف وميزانية محددة؟", "text_en": "Is there an approved marketing plan per project with defined targets and budget?", "evidence_hint_ar": "الخطة التسويقية للمشروع", "evidence_hint_en": "Project marketing plan", "evidence_required": true, "weight": 1.1},
+        {"code": "AX13-Q2", "text_ar": "هل يوجد نظام لإدارة علاقات العملاء يتتبع قمع المبيعات من الاهتمام حتى التعاقد؟", "text_en": "Is there a CRM tracking the sales funnel from enquiry through to contract?", "evidence_hint_ar": "لقطات من نظام إدارة علاقات العملاء", "evidence_hint_en": "CRM system extracts", "evidence_required": true, "weight": 1.3},
+        {"code": "AX13-Q3", "text_ar": "هل توجد سياسة تسعير معتمدة تُراجَع دورياً وفق السوق والمخزون؟", "text_en": "Is there an approved pricing policy reviewed periodically against market and inventory?", "evidence_hint_ar": "سياسة التسعير ومحاضر المراجعة", "evidence_hint_en": "Pricing policy and review minutes", "weight": 1.2},
+        {"code": "AX13-Q4", "text_ar": "هل تُقاس فعالية القنوات التسويقية وتكلفة اكتساب العميل؟", "text_en": "Are marketing channel effectiveness and customer acquisition cost measured?", "evidence_hint_ar": "تقرير أداء القنوات التسويقية", "evidence_hint_en": "Marketing channel performance report", "weight": 1.0},
+        {"code": "AX13-Q5", "text_ar": "كيف تُدار عقود البيع ويُضمن الامتثال لأنظمة البيع على الخارطة؟", "text_en": "How are sales contracts managed and compliance with off-plan sales regulations assured?", "evidence_hint_ar": "نموذج عقد البيع وتصاريح البيع على الخارطة", "evidence_hint_en": "Sales contract template and off-plan permits", "evidence_required": true, "weight": 1.3}
+      ]
+    },
+    {
+      "code": "AX14",
+      "name_ar": "تجربة العميل وخدمات ما بعد البيع",
+      "name_en": "Customer Experience & After-Sales",
+      "description_ar": "رضا العملاء وإدارة الشكاوى وجودة التسليم والضمانات.",
+      "description_en": "Customer satisfaction, complaint management, handover quality and warranties.",
+      "weight": 1.1,
+      "questions": [
+        {"code": "AX14-Q1", "text_ar": "هل يُقاس رضا العملاء دورياً بمنهجية معتمدة؟", "text_en": "Is customer satisfaction measured periodically using an approved methodology?", "evidence_hint_ar": "تقرير قياس رضا العملاء", "evidence_hint_en": "Customer satisfaction survey report", "evidence_required": true, "weight": 1.2},
+        {"code": "AX14-Q2", "text_ar": "هل يوجد نظام لإدارة الشكاوى بمدد استجابة معتمدة ومتابعة إغلاق؟", "text_en": "Is there a complaint management system with approved response times and closure tracking?", "evidence_hint_ar": "سجل الشكاوى وتقارير الاستجابة", "evidence_hint_en": "Complaint register and response reports", "evidence_required": true, "weight": 1.3},
+        {"code": "AX14-Q3", "text_ar": "هل توجد عملية معتمدة لتسليم الوحدات للعملاء وإدارة قوائم الملاحظات؟", "text_en": "Is there an approved unit handover process with snag list management?", "evidence_hint_ar": "إجراءات التسليم للعملاء", "evidence_hint_en": "Customer handover procedure", "weight": 1.2},
+        {"code": "AX14-Q4", "text_ar": "هل تُقدَّم خدمات ما بعد البيع والضمانات وفق مستويات خدمة معلنة؟", "text_en": "Are after-sales services and warranties delivered against published service levels?", "evidence_hint_ar": "وثيقة الضمانات ومستويات الخدمة", "evidence_hint_en": "Warranty and service level document", "weight": 1.0},
+        {"code": "AX14-Q5", "text_ar": "هل تُحلَّل أسباب الشكاوى المتكررة وتُغلَق جذرياً بتحسينات في المنتج؟", "text_en": "Are recurring complaint causes analysed and closed through product improvements?", "evidence_hint_ar": "تقرير تحليل الأسباب الجذرية", "evidence_hint_en": "Root cause analysis report", "weight": 1.1}
+      ]
+    },
+    {
+      "code": "AX15",
+      "name_ar": "إدارة الأصول والمرافق",
+      "name_en": "Asset & Facilities Management",
+      "description_ar": "إدارة الأصول المحتفظ بها والصيانة والمرافق المشتركة والعائد التشغيلي.",
+      "description_en": "Management of retained assets, maintenance, common facilities and operating yield.",
+      "weight": 0.9,
+      "questions": [
+        {"code": "AX15-Q1", "text_ar": "هل توجد استراتيجية معتمدة لإدارة الأصول المحتفظ بها؟", "text_en": "Is there an approved strategy for managing retained assets?", "evidence_hint_ar": "استراتيجية إدارة الأصول", "evidence_hint_en": "Asset management strategy", "weight": 1.0, "allow_not_applicable": true},
+        {"code": "AX15-Q2", "text_ar": "هل توجد خطط صيانة وقائية مجدولة ومتابَعة التنفيذ؟", "text_en": "Are preventive maintenance plans scheduled and their execution tracked?", "evidence_hint_ar": "خطة الصيانة الوقائية", "evidence_hint_en": "Preventive maintenance plan", "weight": 1.1, "allow_not_applicable": true},
+        {"code": "AX15-Q3", "text_ar": "كيف تُدار اتحادات الملاك والمرافق المشتركة والرسوم المرتبطة بها؟", "text_en": "How are owners associations, common facilities and related fees managed?", "evidence_hint_ar": "وثائق اتحاد الملاك وميزانية المرافق", "evidence_hint_en": "Owners association documents and facilities budget", "weight": 1.0, "allow_not_applicable": true},
+        {"code": "AX15-Q4", "text_ar": "هل يُقاس أداء الأصول والعائد التشغيلي ويُقارن بالمستهدف؟", "text_en": "Are asset performance and operating yield measured against target?", "evidence_hint_ar": "تقرير أداء الأصول", "evidence_hint_en": "Asset performance report", "weight": 1.0, "allow_not_applicable": true},
+        {"code": "AX15-Q5", "text_ar": "هل يوجد نظام مؤتمت لإدارة المرافق وطلبات الصيانة؟", "text_en": "Is there an automated facilities and maintenance request management system?", "evidence_hint_ar": "لقطات من نظام إدارة المرافق", "evidence_hint_en": "Facilities management system extracts", "weight": 0.9, "allow_not_applicable": true}
+      ]
+    },
+    {
+      "code": "AX16",
+      "name_ar": "التحول الرقمي والبيانات",
+      "name_en": "Digital Transformation & Data",
+      "description_ar": "الأنظمة المؤسسية وحوكمة البيانات ودعم القرار والأمن السيبراني.",
+      "description_en": "Enterprise systems, data governance, decision support and cybersecurity.",
+      "weight": 1.0,
+      "questions": [
+        {"code": "AX16-Q1", "text_ar": "هل توجد خطة تحول رقمي معتمدة بأولويات وميزانية محددة؟", "text_en": "Is there an approved digital transformation plan with defined priorities and budget?", "evidence_hint_ar": "خطة التحول الرقمي", "evidence_hint_en": "Digital transformation plan", "weight": 1.1},
+        {"code": "AX16-Q2", "text_ar": "ما مدى تكامل الأنظمة المؤسسية (تخطيط الموارد، إدارة المشاريع، علاقات العملاء)؟", "text_en": "How integrated are the enterprise systems (ERP, project management, CRM)?", "evidence_hint_ar": "مخطط الأنظمة والتكاملات", "evidence_hint_en": "Systems and integrations diagram", "evidence_required": true, "weight": 1.3},
+        {"code": "AX16-Q3", "text_ar": "هل توجد حوكمة للبيانات تضمن ملكيتها وجودتها وتعريفاتها الموحدة؟", "text_en": "Is there data governance covering ownership, quality and standard definitions?", "evidence_hint_ar": "سياسة حوكمة البيانات", "evidence_hint_en": "Data governance policy", "weight": 1.1},
+        {"code": "AX16-Q4", "text_ar": "هل تُستخدم لوحات معلومات لدعم قرارات الإدارة العليا بشكل دوري؟", "text_en": "Are dashboards used to support senior management decisions on a regular basis?", "evidence_hint_ar": "لقطات من لوحات المعلومات", "evidence_hint_en": "Dashboard screenshots", "weight": 1.0},
+        {"code": "AX16-Q5", "text_ar": "هل توجد ضوابط أمن سيبراني وحماية بيانات مطبّقة ومُختبَرة؟", "text_en": "Are cybersecurity and data protection controls implemented and tested?", "evidence_hint_ar": "سياسة الأمن السيبراني وتقرير الفحص", "evidence_hint_en": "Cybersecurity policy and assessment report", "evidence_required": true, "weight": 1.2}
+      ]
+    }
+  ]
+}
