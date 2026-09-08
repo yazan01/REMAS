@@ -119,11 +119,11 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="row row-tight" style={{ marginBlockStart: "auto", paddingBlockStart: "var(--space-3)" }}>
-                  <span className="dim" style={{ fontSize: "var(--text-xs)" }}>
-                    {t("landing.output")}
-                  </span>
-                  <span className={`chip ${featured ? "chip-solid" : "chip-brand"}`}>
+                {/* The output is a sentence, not a tag, so it gets its own row
+                    and is free to wrap instead of overflowing the card. */}
+                <div className="layer-output">
+                  <span className="eyebrow">{t("landing.output")}</span>
+                  <span className={`chip chip-wrap ${featured ? "chip-solid" : "chip-brand"}`}>
                     {pick(layer, "output")}
                   </span>
                 </div>
@@ -145,12 +145,12 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-auto-md" style={{ gap: "var(--space-2)" }}>
             {pillars.map((pillar) => (
-              <div key={pillar.code} className="card card-interactive row row-tight" style={{ padding: "12px 14px" }}>
+              <div key={pillar.code} className="card card-interactive pillar-row">
                 <span className="mono" style={{ fontSize: "var(--text-xs)", color: "var(--brand-500)" }}>
                   {pillar.code}
                 </span>
-                <span style={{ fontSize: "var(--text-sm)" }}>{pick(pillar, "name")}</span>
-                <span className="chip mono push">{pillar.question_count}</span>
+                <span className="pillar-name">{pick(pillar, "name")}</span>
+                <span className="chip mono">{pillar.question_count}</span>
               </div>
             ))}
           </div>
@@ -171,6 +171,19 @@ export default function LandingPage() {
 
       <style>{`
         .list-clean { margin:0; padding:0; list-style:none; }
+        .layer-output {
+          margin-block-start:auto; padding-block-start:var(--space-4);
+          display:flex; flex-direction:column; gap:var(--space-2);
+          align-items:flex-start; min-width:0;
+        }
+        /* Three fixed columns rather than a flex row: a long pillar name wraps
+           inside its own column instead of shoving the count onto a second
+           line, so every card keeps the same shape. */
+        .pillar-row {
+          display:grid; grid-template-columns:auto minmax(0,1fr) auto;
+          align-items:center; gap:var(--space-3); padding:12px 14px;
+        }
+        .pillar-name { font-size:var(--text-sm); line-height:1.45; min-width:0; }
         .list-clean li {
           display:flex; align-items:flex-start; gap:var(--space-2);
           font-size:var(--text-sm); color:var(--ink-2); line-height:1.55;

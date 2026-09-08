@@ -169,6 +169,33 @@ def run_engine(playwright, engine: str, shots: Path | None) -> dict:
         note(mobile_overflow <= 1, "no horizontal overflow at 390px", f"{mobile_overflow}px")
         page.set_viewport_size({"width": 1400, "height": 950})
 
+        # ── nothing may paint outside the card that owns it ────────────────
+        # Document-level overflow misses a child bursting out of a bordered
+        # container, which is exactly how a long value in a nowrap chip fails.
+        for page_path, width in (("/", 1400), ("/", 1100), ("/dashboard", 1400)):
+            page.set_viewport_size({"width": width, "height": 950})
+            page.goto(f"{FRONTEND}{page_path}", wait_until="networkidle")
+            page.wait_for_timeout(300)
+            escaping = page.evaluate(
+                """() => {
+                    const bad = [];
+                    for (const card of document.querySelectorAll('.card, .stat, .lane')) {
+                        const box = card.getBoundingClientRect();
+                        for (const child of card.querySelectorAll('*')) {
+                            const c = child.getBoundingClientRect();
+                            if (c.width === 0 || c.height === 0) continue;
+                            if (c.right > box.right + 1 || c.left < box.left - 1) {
+                                bad.push((child.className || child.tagName) + ' in ' + card.className);
+                            }
+                        }
+                    }
+                    return bad.slice(0, 5);
+                }"""
+            )
+            note(not escaping, f"no element escapes its card ({page_path} @ {width}px)",
+                 "; ".join(escaping)[:120])
+        page.set_viewport_size({"width": 1400, "height": 950})
+
         # ── the palette tokens actually resolved in this engine ───────────
         primary = page.evaluate(
             "() => getComputedStyle(document.documentElement).getPropertyValue('--brand-700').trim()"

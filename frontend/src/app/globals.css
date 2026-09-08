@@ -468,6 +468,16 @@ textarea {
   border-color: var(--brand-700);
   color: var(--on-brand);
 }
+/* A chip holding a sentence rather than a label. `.chip` pins white-space to
+   nowrap so short tags never break mid-word; that same rule pushes a long
+   value straight out of its card, so length-bearing chips opt out of it. */
+.chip-wrap {
+  white-space: normal;
+  text-align: start;
+  line-height: 1.5;
+  padding: 5px 11px;
+  max-width: 100%;
+}
 
 .dot {
   width: 6px;
