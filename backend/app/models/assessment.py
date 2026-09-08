@@ -40,6 +40,8 @@ class Assessment(UUIDMixin, TimestampMixin, Base):
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     submitted_by_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id"))
     locked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # FR-12 - an assessment-wide deadline; individual questions may set their own.
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Frozen at submission so historical results stay reproducible (BRD FR-22).
     scoring_snapshot: Mapped[dict | None] = mapped_column(JSON)
@@ -74,7 +76,12 @@ class Response(UUIDMixin, TimestampMixin, Base):
     na_rationale: Mapped[str | None] = mapped_column(Text)
     comment: Mapped[str | None] = mapped_column(Text)
     answered_by_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id"))
+    # Question assignment and deadline (project scope: question assignments;
+    # FR-12: overdue items).
     assigned_to_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id"))
+    assigned_by_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id"))
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Reviewer override — kept apart from the customer answer so the calculated
     # score stays deterministic and the delta is reportable (BRD FR-23 / FR-24).

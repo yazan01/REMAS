@@ -136,6 +136,16 @@ def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)) -> 
     if user.email_verified_at is None:
         raise APIError("auth.email_not_verified", status.HTTP_403_FORBIDDEN)
 
+    # Second factor, when the account has one enrolled (FR-03; mandatory for
+    # administrator roles per the security NFR).
+    if user.mfa_enabled and user.mfa_secret:
+        import pyotp
+
+        if not payload.mfa_code:
+            raise APIError("auth.mfa_required", status.HTTP_401_UNAUTHORIZED, {"mfa_required": True})
+        if not pyotp.TOTP(user.mfa_secret).verify(payload.mfa_code, valid_window=1):
+            raise APIError("auth.mfa_invalid", status.HTTP_401_UNAUTHORIZED, {"mfa_required": True})
+
     user.last_login_at = utcnow()
     audit.record(
         db,
@@ -172,7 +182,7 @@ def set_locale(
     """Persist the language chosen with the header toggle, so the next sign-in
     on any device opens in the same language."""
     if locale not in ("ar", "en"):
-        raise APIError("validation.failed", status.HTTP_422_UNPROCESSABLE_ENTITY)
+        raise APIError("validation.failed", status.HTTP_422_UNPROCESSABLE_CONTENT)
     user.locale = locale
     db.commit()
     db.refresh(user)

@@ -93,7 +93,7 @@ def test_content_is_returned_in_both_languages(client):
     assert res.status_code == 200
     body = res.json()
     assert body["axis_count"] == 16
-    assert body["question_count"] == 80
+    assert body["question_count"] == 160  # BRD: 16 pillars x 10 questions
     axis = body["axes"][0]
     assert axis["name_ar"] and axis["name_en"]
     assert axis["questions"][0]["text_ar"] and axis["questions"][0]["text_en"]
@@ -118,7 +118,7 @@ def test_full_assessment_lifecycle(client):
     assessment_id = created.json()["id"]
 
     questions = [q for a in two_axes for q in a["questions"]]
-    assert len(questions) == 10
+    assert len(questions) == 20  # two pillars, ten questions each
 
     # Partial save -> cannot submit yet.
     client.put(

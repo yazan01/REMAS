@@ -73,7 +73,14 @@ def extract_document(db: Session, document: Document) -> dict[str, Any]:
     """AI-01. Idempotent — re-running reuses the stored extraction."""
     if document.extraction and not document.extraction.get("error"):
         return document.extraction
-    result = extraction.extract(document.stored_path, document.content_type)
+
+    from app.api.routes.evidence import _read
+
+    result = extraction.extract(
+        document.stored_path,
+        document.content_type,
+        loader=lambda: _read(document),
+    )
     document.extraction = result
     db.flush()
     return result

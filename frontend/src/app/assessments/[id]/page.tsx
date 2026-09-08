@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -215,6 +216,9 @@ export default function QuestionnairePage() {
           <h1>{assessment.name}</h1>
         </div>
         <div className="row row-tight" style={{ minWidth: 260 }}>
+          <Link href={`/assessments/${assessmentId}/evidence`} className="btn btn-secondary btn-sm">
+            {t("nav.evidence")}
+          </Link>
           <SaveBadge state={saveState} />
           <div className="meter">
             <span style={{ width: `${percent}%` }} />
@@ -353,9 +357,11 @@ function QuestionCard({
   draft: Draft;
   onChange: (patch: Partial<Draft>) => void;
 }) {
-  const { t, pick } = useLocale();
+  const { t, pick, locale } = useLocale();
+  const [showCriteria, setShowCriteria] = useState(false);
   const disabled = draft.is_not_applicable;
   const answered = draft.is_not_applicable || draft.score !== null;
+  const criteria = question.criteria;
 
   return (
     <article className="q-card" data-answered={answered}>
@@ -376,9 +382,39 @@ function QuestionCard({
                 {pick(question, "evidence_hint")}
               </span>
             )}
+            {criteria && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setShowCriteria((v) => !v)}
+              >
+                {showCriteria ? t("criteria.hide") : t("criteria.show")}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* FR-08 - what each level means for this specific question */}
+      {criteria && showCriteria && (
+        <dl className="criteria">
+          {levels.map((level) => {
+            const row = criteria[String(level.score)];
+            if (!row) return null;
+            return (
+              <div key={level.score} className="criteria-row">
+                <dt>
+                  <span className="crit-n mono" data-level={level.score}>
+                    {level.score}
+                  </span>
+                  {pick(level, "label")}
+                </dt>
+                <dd>{locale === "ar" ? row.ar : row.en}</dd>
+              </div>
+            );
+          })}
+        </dl>
+      )}
 
       {/* the 1-5 scale, labelled from the framework's own level names and
           coloured with the same ramp used everywhere else in the product */}

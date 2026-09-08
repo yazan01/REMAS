@@ -18,8 +18,10 @@ export function LanguageToggle() {
       type="button"
       onClick={toggle}
       className="lang-btn"
-      aria-label={`${t("lang.label")} — ${locale === "ar" ? "العربية" : "English"}`}
-      title={t("lang.label")}
+      // The accessible name states what the button does, not what the current
+      // language is — a screen-reader user needs the action, not the state.
+      aria-label={t("lang.switchAction")}
+      title={t("lang.switchAction")}
     >
       <svg
         width="15"

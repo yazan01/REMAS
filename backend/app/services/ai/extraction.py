@@ -88,14 +88,21 @@ EXTRACTORS = {
 IMAGE_TYPES = {"image/png", "image/jpeg"}
 
 
-def extract(path: str | Path, content_type: str) -> dict[str, Any]:
-    """Returns {pages, text, char_count, ocr_required, language_hint, meta, error}."""
+def extract(
+    path: str | Path, content_type: str, *, loader=None
+) -> dict[str, Any]:
+    """Returns {pages, text, char_count, ocr_required, ocr, language_hint, meta, error}.
+
+    `loader` lets the caller hand over decrypted bytes; evidence is encrypted at
+    rest, so the extractor must not assume it can read the file directly.
+    """
     file_path = Path(path)
     result: dict[str, Any] = {
         "pages": [],
         "text": "",
         "char_count": 0,
         "ocr_required": False,
+        "ocr": None,
         "language_hint": None,
         "meta": {},
         "error": None,
@@ -105,11 +112,33 @@ def extract(path: str | Path, content_type: str) -> dict[str, Any]:
         result["error"] = "file_missing"
         return result
 
+    # Decrypt into a temporary working copy when the file is encrypted at rest.
+    working = file_path
+    temp: Path | None = None
+    if loader is not None:
+        import tempfile
+
+        data = loader()
+        handle = tempfile.NamedTemporaryFile(
+            delete=False, suffix=file_path.suffix or ".bin"
+        )
+        handle.write(data)
+        handle.close()
+        temp = Path(handle.name)
+        working = temp
+
+    try:
+        return _extract_from(working, content_type, result)
+    finally:
+        if temp is not None:
+            temp.unlink(missing_ok=True)
+
+
+def _extract_from(file_path: Path, content_type: str, result: dict[str, Any]) -> dict[str, Any]:
     if content_type in IMAGE_TYPES:
-        # No text layer exists in an image by definition.
-        result["ocr_required"] = True
+        # No text layer exists in an image by definition — this is OCR's job.
         result["meta"] = {"kind": "image"}
-        return result
+        return _apply_ocr(file_path, content_type, result)
 
     extractor = EXTRACTORS.get(content_type)
     if extractor is None:
@@ -129,8 +158,36 @@ def extract(path: str | Path, content_type: str) -> dict[str, Any]:
     result["char_count"] = len(text)
     result["meta"] = meta
     result["language_hint"] = detect_language(text)
+
     # A PDF that yields almost nothing is a scan, not an empty document.
-    result["ocr_required"] = content_type == "application/pdf" and len(text) < TEXT_MIN_CHARS
+    if content_type == "application/pdf" and len(text) < TEXT_MIN_CHARS:
+        return _apply_ocr(file_path, content_type, result)
+    return result
+
+
+def _apply_ocr(file_path: Path, content_type: str, result: dict[str, Any]) -> dict[str, Any]:
+    """AI-01 for scanned documents. When no OCR provider is configured the
+    document is flagged rather than silently reported as empty — an empty
+    extraction would make the coverage stage call good evidence 'missing'."""
+    from app.services.ai import ocr as ocr_engine
+
+    outcome = ocr_engine.run(file_path, content_type)
+    result["ocr"] = {
+        "engine": outcome.get("engine"),
+        "confidence": outcome.get("confidence"),
+        "low_confidence": bool(outcome.get("low_confidence")),
+        "error": outcome.get("error"),
+    }
+
+    text = (outcome.get("text") or "").strip()
+    if text:
+        result["pages"] = outcome.get("pages") or [{"page": 1, "text": text}]
+        result["text"] = text
+        result["char_count"] = len(text)
+        result["language_hint"] = detect_language(text)
+        result["ocr_required"] = False
+    else:
+        result["ocr_required"] = True
     return result
 
 

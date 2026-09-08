@@ -16,6 +16,8 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [needsMfa, setNeedsMfa] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -27,12 +29,17 @@ export default function LoginPage() {
       const res = await api<{ access_token: string }>("/auth/login", {
         method: "POST",
         auth: false,
-        body: { email, password },
+        body: { email, password, mfa_code: mfaCode || null },
       });
       await signIn(res.access_token);
       router.push("/dashboard");
     } catch (err) {
-      if (err instanceof ApiError) setError(err);
+      if (err instanceof ApiError) {
+        // The API tells us a second factor is required rather than the client
+        // having to guess from the account state.
+        if (err.details?.mfa_required) setNeedsMfa(true);
+        setError(err);
+      }
       setBusy(false);
     }
   }
@@ -65,16 +72,35 @@ export default function LoginPage() {
           />
         </div>
 
+        {needsMfa && (
+          <div className="field">
+            <label htmlFor="mfa">{t("auth.mfaPrompt")}</label>
+            <input
+              id="mfa"
+              inputMode="numeric"
+              dir="ltr"
+              autoComplete="one-time-code"
+              maxLength={8}
+              value={mfaCode}
+              onChange={(e) => setMfaCode(e.target.value)}
+            />
+          </div>
+        )}
+
         {error && <ErrorNote text={error.localised(locale)} />}
 
         <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
           {busy ? t("common.loading") : t("auth.submitSignIn")}
         </button>
 
-        <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
-          {t("auth.noAccount")}{" "}
-          <Link href="/register">{t("nav.register")}</Link>
-        </p>
+        <div className="row row-tight" style={{ justifyContent: "space-between" }}>
+          <Link href="/forgot-password" style={{ fontSize: "var(--text-sm)" }}>
+            {t("auth.forgot")}
+          </Link>
+          <span className="muted" style={{ fontSize: "var(--text-sm)" }}>
+            {t("auth.noAccount")} <Link href="/register">{t("nav.register")}</Link>
+          </span>
+        </div>
       </form>
     </AuthShell>
   );

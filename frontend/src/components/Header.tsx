@@ -14,6 +14,9 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const isStaff =
+    !!me && (me.user.role === "ivalue_admin" || me.user.role === "ivalue_reviewer");
+
   const orgName = me
     ? pick({ name_ar: me.organization_name_ar, name_en: me.organization_name_en }, "name")
     : null;
@@ -45,6 +48,22 @@ export function Header() {
                 aria-current={pathname === "/dashboard" ? "page" : undefined}
               >
                 {t("nav.dashboard")}
+              </Link>
+              {isStaff && (
+                <Link
+                  href="/admin"
+                  className="nav-link"
+                  aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+                >
+                  {t("nav.admin")}
+                </Link>
+              )}
+              <Link
+                href="/security"
+                className="nav-link"
+                aria-current={pathname === "/security" ? "page" : undefined}
+              >
+                {t("nav.security")}
               </Link>
               <span className="chip" title={me.user.email}>
                 <span className="dot" />

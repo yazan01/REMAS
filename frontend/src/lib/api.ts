@@ -111,6 +111,8 @@ export type Question = {
   evidence_required: boolean;
   allow_not_applicable: boolean;
   response_type: string;
+  /** FR-08 - what each level of the 1-5 scale means for this question. */
+  criteria: Record<string, { ar: string; en: string }> | null;
 };
 
 export type Axis = {
@@ -189,6 +191,8 @@ export type ResponseRow = {
   override_score: number | null;
   override_reason: string | null;
   effective_score: number | null;
+  assigned_to_id: string | null;
+  due_at: string | null;
 };
 
 export type AxisProgress = {
@@ -211,6 +215,7 @@ export type Progress = {
   unanswered_mandatory: number;
   completion: number;
   can_submit: boolean;
+  overdue: number;
   axes: AxisProgress[];
 };
 
@@ -250,3 +255,331 @@ export type Scoring = {
   config: Record<string, unknown>;
   warnings: string[];
 };
+
+/* ---------- phase-2 API shapes ---------- */
+
+export type DocumentRow = {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  version: number;
+  category: string | null;
+  description: string | null;
+  created_at: string;
+};
+
+export type EvidenceLink = {
+  id: string;
+  document_id: string;
+  question_id: string;
+  status: string;
+  reviewer_note: string | null;
+  filename: string | null;
+  created_at: string;
+};
+
+export type QuestionRow = {
+  question_id: string;
+  code: string;
+  axis_id: string;
+  axis_code: string;
+  text_ar: string;
+  text_en: string;
+  evidence_hint_ar: string | null;
+  evidence_hint_en: string | null;
+  is_mandatory: boolean;
+  evidence_required: boolean;
+  answered: boolean;
+  score: number | null;
+  effective_score: number | null;
+  is_not_applicable: boolean;
+  evidence_status: string;
+  evidence_count: number;
+  flagged: boolean;
+};
+
+export type AIFinding = {
+  id: string;
+  kind: string;
+  severity: string | null;
+  axis_id: string | null;
+  question_id: string | null;
+  document_id: string | null;
+  title_ar: string | null;
+  title_en: string | null;
+  body_ar: string | null;
+  body_en: string | null;
+  citation: Record<string, unknown> | null;
+  confidence: number | null;
+  review_status: string;
+  reviewer_note: string | null;
+  created_at: string;
+};
+
+export type AIJobRow = {
+  id: string;
+  stage: string;
+  status: string;
+  provider: string | null;
+  model: string | null;
+  summary: Record<string, number> | null;
+  error: string | null;
+  created_at: string;
+};
+
+export type InitiativeRow = {
+  id: string;
+  axis_id: string | null;
+  title_ar: string;
+  title_en: string;
+  objective_ar: string | null;
+  objective_en: string | null;
+  rationale_ar: string | null;
+  rationale_en: string | null;
+  owner_function_ar: string | null;
+  owner_function_en: string | null;
+  dependencies_ar: string | null;
+  dependencies_en: string | null;
+  linked_gap: string | null;
+  horizon_code: string | null;
+  priority: number;
+  order_index: number;
+  source: string;
+  is_included: boolean;
+};
+
+export type Roadmap = {
+  horizons: Array<{
+    code: string;
+    name_ar: string;
+    name_en: string;
+    months_from: number;
+    months_to: number;
+    initiatives: InitiativeRow[];
+  }>;
+  unassigned: InitiativeRow[];
+  total: number;
+};
+
+export type LayerFeatures = {
+  layer: string;
+  features: string[];
+  all_layers: Record<string, string[]>;
+};
+
+export type ReviewView = {
+  assessment: {
+    id: string;
+    name: string;
+    layer: string;
+    status: string;
+    organization_id: string;
+    submitted_at: string | null;
+  };
+  progress: Progress;
+  score_deltas: Array<{
+    question_id: string;
+    question_code: string;
+    axis_id: string;
+    axis_code: string | null;
+    customer_score: number;
+    reviewer_score: number;
+    delta: number;
+    reason: string | null;
+    is_material: boolean;
+  }>;
+  clarifications: Array<{
+    question_id: string;
+    question_code: string | null;
+    axis_id: string | null;
+    document_id: string;
+    filename: string | null;
+    status: string;
+    reviewer_note: string | null;
+  }>;
+};
+
+export type AdminFramework = {
+  id: string;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  is_active: boolean;
+  versions: Array<{
+    id: string;
+    version: string;
+    status: string;
+    published_at: string | null;
+    axis_count: number;
+    question_count: number;
+  }>;
+};
+
+export type AdminOrganization = {
+  id: string;
+  slug: string;
+  name_ar: string;
+  name_en: string;
+  is_ivalue: boolean;
+  is_active: boolean;
+  profile_completeness: number;
+  user_count: number;
+  assessment_count: number;
+  created_at: string;
+};
+
+export type AuditRow = {
+  id: string;
+  created_at: string;
+  actor_email: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  organization_id: string | null;
+  ip_address: string | null;
+  payload: Record<string, unknown> | null;
+};
+
+/** Multipart upload — the JSON helper cannot carry a file body. */
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  extra: Record<string, string> = {},
+): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  for (const [key, value] of Object.entries(extra)) form.append(key, value);
+
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { method: "POST", headers, body: form });
+  const text = await res.text();
+  const parsed = text ? JSON.parse(text) : {};
+  if (!res.ok) throw new ApiError(res.status, parsed);
+  return parsed as T;
+}
+
+/** Authenticated download — <a href> cannot carry the bearer token. */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${path}`, { headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text ? JSON.parse(text) : {});
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export const API_BASE = BASE;
+
+export type OverdueRow = {
+  question_id: string;
+  question_code: string;
+  axis_id: string;
+  axis_code: string;
+  assigned_to: string | null;
+  assigned_to_email: string | null;
+  due_at: string | null;
+  days_overdue: number | null;
+  is_mandatory: boolean;
+};
+
+export type UserProgress = {
+  user_id: string | null;
+  full_name: string | null;
+  email: string | null;
+  assigned: number;
+  answered: number;
+  overdue: number;
+  completion: number;
+};
+
+export type Comparison = {
+  previous_assessment_id: string;
+  previous_name: string;
+  previous_submitted_at: string | null;
+  previous_overall: number | null;
+  current_overall: number | null;
+  overall_delta: number | null;
+  axes: Array<{
+    axis_id: string;
+    code: string;
+    previous: number;
+    current: number;
+    delta: number;
+  }>;
+};
+
+export type ExpertSessionRow = {
+  id: string;
+  assessment_id: string;
+  status: string;
+  preferred_slots: string[];
+  scheduled_at: string | null;
+  duration_minutes: number;
+  meeting_url: string | null;
+  agenda: string | null;
+  notes: string | null;
+  expert_name: string | null;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export type ReportTemplateRow = {
+  id: string;
+  code: string;
+  name_ar: string;
+  name_en: string;
+  framework_version_id: string | null;
+  sections: Array<{
+    key: string;
+    enabled: boolean;
+    order: number;
+    title_ar?: string | null;
+    title_en?: string | null;
+  }>;
+  branding: Record<string, unknown>;
+  copy_blocks: Record<string, { ar?: string; en?: string }>;
+  output_formats: string[];
+  maturity_labels: Record<string, { ar?: string; en?: string }>;
+  include_comparison: boolean;
+  is_default: boolean;
+  is_active: boolean;
+};
+
+export type DocumentHistoryRow = {
+  id: string;
+  filename: string;
+  version: number;
+  size_bytes: number;
+  created_at: string;
+  superseded: boolean;
+};
+
+/** Fetches a protected file and hands back an object URL for inline preview. */
+export async function previewUrl(path: string): Promise<{ url: string; type: string }> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${BASE}${path}`, { headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text ? JSON.parse(text) : {});
+  }
+  const blob = await res.blob();
+  return { url: URL.createObjectURL(blob), type: blob.type };
+}

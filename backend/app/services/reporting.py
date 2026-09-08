@@ -73,6 +73,14 @@ T = {
         "method": "منهجية الاحتساب",
         "method_body": "المتوسط المرجّح: مجموع (درجة السؤال × وزنه) ÷ مجموع الأوزان، ثم مجموع (درجة المحور × وزنه) ÷ مجموع أوزان المحاور. الأسئلة الموسومة «غير منطبق» مستبعدة من البسط والمقام. الاحتساب حتمي وقابل لإعادة الإنتاج من نسخة القواعد المجمّدة عند التقديم.",
         "ai_note": "الملاحظات التحليلية في هذا التقرير مسودات آلية خاضعة لمراجعة خبير iValue، ولا تغيّر أي درجة محتسبة.",
+        "comparison": "المقارنة بالتقييم السابق",
+        "previous": "السابق",
+        "current": "الحالي",
+        "change": "التغيّر",
+        "no_prior": "لا يوجد تقييم سابق للمقارنة.",
+        "criteria": "معايير التقييم",
+        "improved": "تحسّن",
+        "declined": "تراجع",
     },
     "en": {
         "report_title": "Institutional Maturity Assessment Report",
@@ -116,10 +124,95 @@ T = {
         "method": "Calculation method",
         "method_body": "Weighted mean: sum(question score × weight) ÷ sum(weights), then sum(axis score × weight) ÷ sum(axis weights). Questions marked not applicable are excluded from both numerator and denominator. The calculation is deterministic and reproducible from the rule set frozen at submission.",
         "ai_note": "Analytical observations in this report are automated drafts subject to iValue expert review; they never alter a calculated score.",
+        "comparison": "Comparison with the previous assessment",
+        "previous": "Previous",
+        "current": "Current",
+        "change": "Change",
+        "no_prior": "No prior assessment is available for comparison.",
+        "criteria": "Assessment criteria",
+        "improved": "improved",
+        "declined": "declined",
     },
 }
 
 RAMP = ["#c9d2db", "#9db4cc", "#6d8fb2", "#426b95", "#1e3a5c"]
+
+
+SECTION_TITLE_KEY = {
+    "executive_summary": "exec",
+    "maturity_results": "results",
+    "axis_findings": "axis_findings",
+    "priorities": "priorities",
+    "initiatives": "initiatives",
+    "roadmap": "roadmap",
+}
+
+
+
+def _scale_key(ctx: dict, t: dict, locale: str) -> str:
+    """FR-08 - the maturity criteria the scores were read against, printed once
+    so a reader can interpret every axis score in the section that follows."""
+    levels = ctx.get("levels") or {}
+    if not levels:
+        return ""
+    rows = "".join(
+        f'<tr><td class="mono num">{score}</td>'
+        f'<td><b>{_esc(_pick(level, "label", locale))}</b></td>'
+        f'<td>{_esc(_pick(level, "description", locale))}</td></tr>'
+        for score, level in sorted(levels.items())
+    )
+    return (
+        f'<div class="axis-block"><div class="axis-head">'
+        f'<h4>{_esc(t["criteria"])}</h4></div>'
+        f'<table class="data"><tbody>{rows}</tbody></table></div>'
+    )
+
+
+def _logo(brand: dict) -> str:
+    """The template may carry a client logo as a data URI; otherwise the built-in
+    maturity-ladder mark is drawn from the branding ramp."""
+    logo = brand.get("logo_data_uri")
+    if logo:
+        return f'<img class="cover-logo" src="{_esc(logo)}" alt="">'
+    ramp = brand.get("ramp") or RAMP
+    bars = "".join(
+        f'<i style="height:{h}%;background:{ramp[i]}"></i>'
+        for i, h in enumerate((30, 47, 64, 82, 100))
+    )
+    return f'<div class="cover-mark">{bars}</div>'
+
+
+def _comparison_block(ctx: dict, t: dict, axes: dict, locale: str) -> str:
+    """Report section 9: comparison to prior assessments where available."""
+    data = ctx.get("comparison")
+    if not data:
+        return ""
+    delta = data.get("overall_delta")
+    arrow = "" if delta is None else ("+" if delta > 0 else "")
+    direction = ""
+    if delta is not None and delta != 0:
+        direction = t["improved"] if delta > 0 else t["declined"]
+
+    rows = "".join(
+        f'<tr><td class="mono dim">{_esc(r["code"])}</td>'
+        f'<td class="mono num">{_num(r["previous"])}</td>'
+        f'<td class="mono num">{_num(r["current"])}</td>'
+        f'<td class="mono num" style="color:{"#1f6b4a" if r["delta"] > 0 else ("#9b3d2e" if r["delta"] < 0 else "inherit")}">'
+        f'{"+" if r["delta"] > 0 else ""}{_num(r["delta"])}</td></tr>'
+        for r in data.get("axes", [])
+    )
+    if not rows:
+        return ""
+
+    return f"""<h4 class="mt">{_esc(t['comparison'])}</h4>
+<p class="dim" style="font-size:9pt">{_esc(data.get('previous_name') or '')} · {_esc((data.get('previous_submitted_at') or '')[:10])}
+ &nbsp;·&nbsp; {_esc(t['overall'])}: {_num(data.get('previous_overall'))} → {_num(data.get('current_overall'))}
+ {f'({arrow}{_num(delta)} {_esc(direction)})' if delta is not None else ''}</p>
+<table class="data">
+  <thead><tr><th>{_esc(t['axis'])}</th><th class="num">{_esc(t['previous'])}</th>
+  <th class="num">{_esc(t['current'])}</th><th class="num">{_esc(t['change'])}</th></tr></thead>
+  <tbody>{rows}</tbody>
+</table>"""
 
 
 def _esc(value: Any) -> str:
@@ -133,7 +226,12 @@ def _pick(row: Any, field: str, locale: str) -> str:
     return str(value or "")
 
 
-def _radar_svg(points: list[tuple[str, float]], size: int = 340) -> str:
+def _radar_svg(points: list[tuple[str, float]], size: int = 340, brand: dict | None = None) -> str:
+    brand = brand or {}
+    primary = brand.get("primary", "#1e3a5c")
+    line = brand.get("line", "#c6d0da")
+    surface = brand.get("surface_alt", "#f4f6f8")
+    muted = brand.get("muted", "#6b7d8d")
     if len(points) < 3:
         return ""
     pad, cx, cy = 38, size / 2, size / 2
@@ -146,28 +244,66 @@ def _radar_svg(points: list[tuple[str, float]], size: int = 340) -> str:
     parts = [f'<svg viewBox="0 0 {size} {size}" width="{size}" height="{size}">']
     for ring in (0.25, 0.5, 0.75, 1.0):
         coords = " ".join(f"{x:.1f},{y:.1f}" for x, y in (at(i, ring) for i in range(len(points))))
-        fill = "#f4f6f8" if ring == 1.0 else "none"
-        parts.append(f'<polygon points="{coords}" fill="{fill}" stroke="#c6d0da" stroke-width="1"/>')
+        fill = surface if ring == 1.0 else "none"
+        parts.append(f'<polygon points="{coords}" fill="{fill}" stroke="{line}" stroke-width="1"/>')
     for i in range(len(points)):
         x, y = at(i, 1)
-        parts.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#c6d0da"/>')
+        parts.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="{line}"/>')
     coords = " ".join(
         f"{x:.1f},{y:.1f}"
         for x, y in (at(i, max(0.0, (v - 1) / 4)) for i, (_, v) in enumerate(points))
     )
     parts.append(
-        f'<polygon points="{coords}" fill="#3d669033" stroke="#1e3a5c" stroke-width="2" stroke-linejoin="round"/>'
+        f'<polygon points="{coords}" fill="{primary}33" stroke="{primary}" stroke-width="2" stroke-linejoin="round"/>'
     )
     for i, (label, value) in enumerate(points):
         x, y = at(i, max(0.0, (value - 1) / 4))
-        parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="#1e3a5c"/>')
+        parts.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="3" fill="{primary}"/>')
         lx, ly = at(i, 1.16)
         parts.append(
-            f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8.5" fill="#6b7d8d" '
+            f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="8.5" fill="{muted}" '
             f'text-anchor="middle" dominant-baseline="middle">{_esc(label)}</text>'
         )
     parts.append("</svg>")
     return "".join(parts)
+
+
+def resolve_template(db: Session, assessment: Assessment) -> "ReportTemplate":
+    """FR-34 - the template drives sections, branding, wording and formats.
+    A version-specific default wins; otherwise the global default; otherwise a
+    transient object carrying the shipped defaults."""
+    from app.models import DEFAULT_BRANDING, DEFAULT_SECTIONS, ReportTemplate
+
+    template = db.scalars(
+        select(ReportTemplate)
+        .where(
+            ReportTemplate.framework_version_id == assessment.framework_version_id,
+            ReportTemplate.is_active.is_(True),
+        )
+        .order_by(ReportTemplate.is_default.desc(), ReportTemplate.created_at)
+    ).first()
+    if template is None:
+        template = db.scalars(
+            select(ReportTemplate)
+            .where(
+                ReportTemplate.framework_version_id.is_(None),
+                ReportTemplate.is_active.is_(True),
+            )
+            .order_by(ReportTemplate.is_default.desc(), ReportTemplate.created_at)
+        ).first()
+    if template is None:
+        template = ReportTemplate(
+            code="builtin",
+            name_ar="القالب الافتراضي",
+            name_en="Default template",
+            sections=list(DEFAULT_SECTIONS),
+            branding=dict(DEFAULT_BRANDING),
+            copy_blocks={},
+            output_formats=["pdf", "html", "json"],
+            maturity_labels={},
+            include_comparison=True,
+        )
+    return template
 
 
 def build_context(db: Session, assessment: Assessment, locale: str = "ar") -> dict[str, Any]:
@@ -211,6 +347,31 @@ def build_context(db: Session, assessment: Assessment, locale: str = "ar") -> di
         )
     )
 
+    template = resolve_template(db, assessment)
+    from app.models import DEFAULT_BRANDING
+
+    branding = {**DEFAULT_BRANDING, **(template.branding or {})}
+    sections = {
+        item["key"]: item
+        for item in sorted(
+            template.sections or [], key=lambda i: i.get("order", 0)
+        )
+    }
+    # Template wording may override the framework's maturity labels (FR-34).
+    for score, override in (template.maturity_labels or {}).items():
+        level = levels.get(int(score))
+        if level is not None and isinstance(override, dict):
+            if override.get("ar"):
+                level.label_ar = override["ar"]
+            if override.get("en"):
+                level.label_en = override["en"]
+
+    comparison = (
+        assessment_service.comparison(db, assessment)
+        if template.include_comparison
+        else None
+    )
+
     return {
         "locale": locale,
         "t": T[locale],
@@ -224,18 +385,44 @@ def build_context(db: Session, assessment: Assessment, locale: str = "ar") -> di
         "narrative": narrative,
         "horizons": horizons,
         "initiatives": initiatives,
+        "template": template,
+        "branding": branding,
+        "sections": sections,
+        "copy_blocks": template.copy_blocks or {},
+        "comparison": comparison,
         "generated_at": utcnow(),
     }
 
 
 def render_html(ctx: dict[str, Any]) -> str:
     locale = ctx["locale"]
-    t = ctx["t"]
+    t = dict(ctx["t"])
     rtl = locale == "ar"
     result = ctx["result"]
     axes = ctx["axes"]
     levels = ctx["levels"]
     org = ctx["org"]
+    brand = ctx["branding"]
+    sections = ctx["sections"]
+    copy_blocks = ctx.get("copy_blocks") or {}
+    ramp = brand.get("ramp") or RAMP
+
+    # FR-34: an administrator may retitle any section, and the branding block
+    # supplies the confidentiality and footer wording.
+    for key, item in sections.items():
+        title = item.get(f"title_{locale}")
+        if title and key in SECTION_TITLE_KEY:
+            t[SECTION_TITLE_KEY[key]] = title
+    t["confidential"] = brand.get(f"confidentiality_{locale}") or t["confidential"]
+    t["prepared_by"] = brand.get(f"footer_{locale}") or t["prepared_by"]
+
+    def on(key: str) -> bool:
+        return sections.get(key, {}).get("enabled", True)
+
+    def block(key: str) -> str:
+        text = (copy_blocks.get(key) or {}).get(locale) if isinstance(copy_blocks.get(key), dict) else None
+        return f'<p class="lede">{_esc(text)}</p>' if text else ""
+
 
     def level_label(score: int | None) -> str:
         if not score or score not in levels:
@@ -257,11 +444,11 @@ def render_html(ctx: dict[str, Any]) -> str:
 <meta charset="utf-8"><title>{_esc(t['report_title'])}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Readex+Pro:wght@400;500;600&display=swap">
-<style>{_css(rtl)}</style></head><body>
+<style>{_css(rtl, brand)}</style></head><body>
 
 <section class="cover">
-  <div class="cover-mark"><i></i><i></i><i></i><i></i><i></i></div>
-  <div class="eyebrow">REMAS · iValue Consult</div>
+  {_logo(brand)}
+  <div class="eyebrow">{_esc(brand.get('organisation_name') or 'iValue Consult')}</div>
   <h1>{_esc(t['report_title'])}</h1>
   <table class="cover-meta">
     <tr><th>{_esc(t['client'])}</th><td>{_esc(org_name)}</td></tr>
@@ -278,10 +465,14 @@ def render_html(ctx: dict[str, Any]) -> str:
 </section>
 """]
 
+    if not on("cover"):
+        out = [out[0].split('<section class="cover">')[0] + "</head><body>"]
+
     # ── executive summary ─────────────────────────────────────────────────
     narrative = ctx["narrative"]
     body = _pick(narrative, "body", locale) if narrative else ""
-    out.append(f"""<section class="page">
+    if on("executive_summary"):
+        out.append(f"""<section class="page">
 <h2>{_esc(t['exec'])}</h2>
 <div class="tiles">
   <div class="tile hero"><span class="tile-v">{_num(result['overall_score'])}</span><span class="tile-l">{_esc(t['overall'])}</span></div>
@@ -290,10 +481,12 @@ def render_html(ctx: dict[str, Any]) -> str:
   <div class="tile"><span class="tile-v">{round(result['evidence_completeness']*100)}%</span><span class="tile-l">{_esc(t['evidence'])}</span></div>
 </div>
 {f'<p class="lede">{_esc(body)}</p>' if body else ''}
+{block('executive_summary')}
 <div class="two-col">
   <div><h4>{_esc(t['strengths'])}</h4>{_chips(result['strengths'], axes, locale, 'ok')}</div>
   <div><h4>{_esc(t['gaps'])}</h4>{_chips(result['gaps'], axes, locale, 'bad')}</div>
 </div>
+{_comparison_block(ctx, t, axes, locale)}
 <div class="note">{_esc(t['ai_note'])}</div>
 </section>""")
 
@@ -301,7 +494,7 @@ def render_html(ctx: dict[str, Any]) -> str:
     rows = []
     for row in result["axes"]:
         pct = ((row["score"] - 1) / 4 * 100) if row["score"] is not None else 0
-        colour = RAMP[(row["maturity_level"] or 1) - 1] if row["maturity_level"] else "#dbe2e9"
+        colour = ramp[(row["maturity_level"] or 1) - 1] if row["maturity_level"] else brand['line']
         rows.append(f"""<tr>
   <td class="mono dim">{_esc(row['code'])}</td>
   <td>{_esc(axis_name(row['axis_id'], row['code']))}</td>
@@ -311,13 +504,14 @@ def render_html(ctx: dict[str, Any]) -> str:
 </tr>""")
 
     heat = "".join(
-        f'<div class="heat-cell" style="background:{RAMP[(a["maturity_level"] or 1)-1] if a["maturity_level"] else "#eef2f6"};'
-        f'color:{"#0f1b28" if (a["maturity_level"] or 1) <= 2 else "#fff"}">'
+        f'<div class="heat-cell" style="background:{ramp[(a["maturity_level"] or 1)-1] if a["maturity_level"] else brand["surface_alt"]};'
+        f'color:{brand["ink"] if (a["maturity_level"] or 1) <= 2 else "#fff"}">'
         f'<span class="hc">{_esc(a["code"])}</span><span class="hv">{_num(a["score"]) if a["is_scored"] else "—"}</span></div>'
         for a in result["axes"]
     )
 
-    out.append(f"""<section class="page">
+    if on("maturity_results"):
+        out.append(f"""<section class="page">
 <h2>{_esc(t['results'])}</h2>
 <div class="results-grid">
   <div>
@@ -329,7 +523,7 @@ def render_html(ctx: dict[str, Any]) -> str:
   </div>
   <div class="radar-wrap">
     <h4>{_esc(t['radar'])}</h4>
-    {_radar_svg(radar)}
+    {_radar_svg(radar, brand=brand)}
   </div>
 </div>
 <h4 class="mt">{_esc(t['heatmap'])}</h4>
@@ -346,7 +540,7 @@ def render_html(ctx: dict[str, Any]) -> str:
             items = axis_findings.get(kind) or []
             return _pick(items[0], "body", locale) if items else "—"
 
-        colour = RAMP[(row["maturity_level"] or 1) - 1] if row["maturity_level"] else "#dbe2e9"
+        colour = ramp[(row["maturity_level"] or 1) - 1] if row["maturity_level"] else brand['line']
         blocks.append(f"""<div class="axis-block">
   <div class="axis-head">
     <span class="swatch" style="background:{colour}"></span>
@@ -361,7 +555,11 @@ def render_html(ctx: dict[str, Any]) -> str:
     <dt>{_esc(t['evidence'])}</dt><dd class="mono">{round(row['evidence_completeness']*100)}%</dd>
   </dl>
 </div>""")
-    out.append(f'<section class="page"><h2>{_esc(t["axis_findings"])}</h2>{"".join(blocks)}</section>')
+    if on("axis_findings"):
+        out.append(
+            f'<section class="page"><h2>{_esc(t["axis_findings"])}</h2>'
+            f'{block("axis_findings")}{"".join(blocks)}</section>'
+        )
 
     # ── priority improvement areas ────────────────────────────────────────
     prio_rows = "".join(
@@ -373,7 +571,8 @@ def render_html(ctx: dict[str, Any]) -> str:
         <td class="mono num">{_num(p['priority_score'])}</td></tr>"""
         for p in result["priorities"][:12]
     )
-    out.append(f"""<section class="page">
+    if on("priorities"):
+        out.append(f"""<section class="page">
 <h2>{_esc(t['priorities'])}</h2>
 <table class="data">
   <thead><tr><th class="num">{_esc(t['rank'])}</th><th></th><th>{_esc(t['axis'])}</th>
@@ -384,7 +583,7 @@ def render_html(ctx: dict[str, Any]) -> str:
 </section>""")
 
     # ── initiatives + roadmap ─────────────────────────────────────────────
-    initiatives = ctx["initiatives"]
+    initiatives = ctx["initiatives"] if on("initiatives") else []
     horizons = ctx["horizons"]
     if initiatives:
         cards = "".join(
@@ -416,10 +615,15 @@ def render_html(ctx: dict[str, Any]) -> str:
   <ul>{lane_items}</ul>
 </div>""")
         out.append(
-            f'<section class="page"><h2>{_esc(t["initiatives"])}</h2>{cards}</section>'
-            f'<section class="page"><h2>{_esc(t["roadmap"])}</h2><div class="lanes">{"".join(lanes)}</div></section>'
+            f'<section class="page"><h2>{_esc(t["initiatives"])}</h2>'
+            f'{block("initiatives")}{cards}</section>'
         )
-    else:
+        if on("roadmap"):
+            out.append(
+                f'<section class="page"><h2>{_esc(t["roadmap"])}</h2>'
+                f'{block("roadmap")}<div class="lanes">{"".join(lanes)}</div></section>'
+            )
+    elif on("initiatives"):
         out.append(
             f'<section class="page"><h2>{_esc(t["initiatives"])}</h2>'
             f'<div class="note">{_esc(t["no_initiatives"])}</div></section>'
@@ -451,60 +655,82 @@ def _chips(ids: list[str], axes: dict, locale: str, tone: str) -> str:
     )
 
 
-def _css(rtl: bool) -> str:
-    return """
+def _css(rtl: bool, brand: dict | None = None) -> str:
+    """The stylesheet is a template: branding tokens are substituted, so a
+    change in the report template restyles the PDF with no code change
+    (FR-34)."""
+    brand = brand or {}
+    ramp = brand.get("ramp") or RAMP
+    tokens = {
+        "$PRIMARY": brand.get("primary", "#1e3a5c"),
+        "$ACCENT": brand.get("accent", "#b8863b"),
+        "$INK": brand.get("ink", "#0f1b28"),
+        "$MUTED": brand.get("muted", "#6b7d8d"),
+        "$LINE": brand.get("line", "#dbe2e9"),
+        "$SURFACE": brand.get("surface_alt", "#f6f8fa"),
+    }
+    for index, colour in enumerate(ramp[:5], start=1):
+        tokens[f"$M{index}"] = colour
+    css = _CSS_TEMPLATE
+    for token, value in tokens.items():
+        css = css.replace(token, value)
+    return css
+
+
+_CSS_TEMPLATE = """
 @page { size: A4; margin: 16mm 14mm 18mm; }
 * { box-sizing: border-box; }
-body { font-family: "IBM Plex Sans Arabic","IBM Plex Sans",sans-serif; color:#0f1b28;
+body { font-family: "IBM Plex Sans Arabic","IBM Plex Sans",sans-serif; color:$INK;
   font-size: 10.5pt; line-height: 1.65; margin:0; }
 h1,h2,h3,h4 { font-family:"Readex Pro","IBM Plex Sans Arabic",sans-serif; margin:0; font-weight:600; }
-h2 { font-size: 15pt; padding-bottom:6px; border-bottom:2px solid #1e3a5c; margin-bottom:14px; }
+h2 { font-size: 15pt; padding-bottom:6px; border-bottom:2px solid $PRIMARY; margin-bottom:14px; }
 h4 { font-size: 10.5pt; margin-bottom:6px; }
 .mono { font-family:"IBM Plex Mono",monospace; font-variant-numeric: tabular-nums; }
-.dim { color:#6b7d8d; }
+.dim { color:$MUTED; }
 .num { text-align:end; }
 .mt { margin-top:16px; }
 section.page { page-break-before: always; padding-top:2mm; }
 .cover { min-height: 250mm; display:flex; flex-direction:column; justify-content:center; }
 .cover-mark { display:flex; align-items:flex-end; gap:4px; height:40px; margin-bottom:22px; }
 .cover-mark i { width:7px; border-radius:2px; display:block; }
-.cover-mark i:nth-child(1){height:30%;background:#c9d2db}
-.cover-mark i:nth-child(2){height:47%;background:#9db4cc}
-.cover-mark i:nth-child(3){height:64%;background:#6d8fb2}
-.cover-mark i:nth-child(4){height:82%;background:#426b95}
-.cover-mark i:nth-child(5){height:100%;background:#1e3a5c}
+.cover-mark i:nth-child(1){height:30%;background:$M1}
+.cover-mark i:nth-child(2){height:47%;background:$M2}
+.cover-mark i:nth-child(3){height:64%;background:$M3}
+.cover-mark i:nth-child(4){height:82%;background:$M4}
+.cover-mark i:nth-child(5){height:100%;background:$PRIMARY}
+.cover-logo { max-height:56px; max-width:220px; margin-bottom:22px; display:block; }
 .eyebrow { font-family:"IBM Plex Mono",monospace; font-size:8pt; letter-spacing:.18em;
-  text-transform:uppercase; color:#6b7d8d; }
+  text-transform:uppercase; color:$MUTED; }
 .cover h1 { font-size:26pt; margin:10px 0 26px; letter-spacing:-.02em; }
 .cover-meta { border-collapse:collapse; width:100%; max-width:150mm; }
-.cover-meta th { text-align:start; font-weight:500; color:#6b7d8d; font-size:9pt;
-  padding:7px 0; width:38mm; border-bottom:1px solid #dbe2e9; }
-.cover-meta td { padding:7px 0; border-bottom:1px solid #dbe2e9; }
-.scope { margin-top:26px; padding:12px 14px; background:#f6f8fa; border:1px solid #dbe2e9; border-radius:6px; }
-.scope .label { font-size:8.5pt; color:#6b7d8d; margin-bottom:3px; }
+.cover-meta th { text-align:start; font-weight:500; color:$MUTED; font-size:9pt;
+  padding:7px 0; width:38mm; border-bottom:1px solid $LINE; }
+.cover-meta td { padding:7px 0; border-bottom:1px solid $LINE; }
+.scope { margin-top:26px; padding:12px 14px; background:$SURFACE; border:1px solid $LINE; border-radius:6px; }
+.scope .label { font-size:8.5pt; color:$MUTED; margin-bottom:3px; }
 .scope p { margin:0; font-size:10pt; }
-.confidential { margin-top:auto; padding-top:22px; font-size:8.5pt; color:#6b7d8d; }
+.confidential { margin-top:auto; padding-top:22px; font-size:8.5pt; color:$MUTED; }
 .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
-.tile { border:1px solid #dbe2e9; border-radius:6px; padding:10px 12px; }
-.tile.hero { border-color:#88a9cc; background:#f4f8fc; }
+.tile { border:1px solid $LINE; border-radius:6px; padding:10px 12px; }
+.tile.hero { border-color:$M3; background:$SURFACE; }
 .tile-v { display:block; font-family:"Readex Pro",sans-serif; font-size:17pt; line-height:1.1;
   font-variant-numeric:tabular-nums; }
-.tile.hero .tile-v { color:#1e3a5c; }
-.tile-l { display:block; font-size:8pt; color:#6b7d8d; margin-top:3px; }
+.tile.hero .tile-v { color:$PRIMARY; }
+.tile-l { display:block; font-size:8pt; color:$MUTED; margin-top:3px; }
 .lede { font-size:10.5pt; margin:10px 0 14px; }
 .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
 .chip { display:inline-block; font-size:8.5pt; padding:2px 9px; border-radius:99px;
-  border:1px solid #dbe2e9; background:#f6f8fa; margin:0 0 4px; }
-.chip.ok { background:#dcefe4; border-color:#a8d3bd; color:#1f6b4a; }
-.chip.bad { background:#f8e2dc; border-color:#e0b4a6; color:#9b3d2e; }
-.note { margin-top:12px; padding:9px 12px; background:#f4f8fc; border:1px solid #dbe6f2;
-  border-radius:5px; font-size:9pt; color:#3f5162; }
+  border:1px solid $LINE; background:$SURFACE; margin:0 0 4px; }
+.chip.ok { background:$SURFACE; border-color:$LINE; color:#1f6b4a; }
+.chip.bad { background:$SURFACE; border-color:$LINE; color:#9b3d2e; }
+.note { margin-top:12px; padding:9px 12px; background:$SURFACE; border:1px solid $LINE;
+  border-radius:5px; font-size:9pt; color:$INK; }
 table.data { width:100%; border-collapse:collapse; font-size:9.5pt; }
-table.data th { text-align:start; font-size:8.5pt; color:#6b7d8d; font-weight:600;
-  background:#f6f8fa; padding:6px 8px; border-bottom:1px solid #dbe2e9; }
-table.data td { padding:5px 8px; border-bottom:1px solid #eef2f6; }
+table.data th { text-align:start; font-size:8.5pt; color:$MUTED; font-weight:600;
+  background:$SURFACE; padding:6px 8px; border-bottom:1px solid $LINE; }
+table.data td { padding:5px 8px; border-bottom:1px solid $LINE; }
 .bar-cell { width:34mm; }
-.bar { display:block; height:7px; background:#eef2f6; border-radius:99px; overflow:hidden; }
+.bar { display:block; height:7px; background:$LINE; border-radius:99px; overflow:hidden; }
 .bar i { display:block; height:100%; border-radius:99px; }
 .results-grid { display:grid; grid-template-columns:1fr 92mm; gap:14px; align-items:start; }
 .radar-wrap svg { width:100%; height:auto; }
@@ -513,29 +739,29 @@ table.data td { padding:5px 8px; border-bottom:1px solid #eef2f6; }
   flex-direction:column; justify-content:space-between; }
 .heat-cell .hc { font-family:"IBM Plex Mono",monospace; font-size:7pt; opacity:.85; }
 .heat-cell .hv { font-family:"IBM Plex Mono",monospace; font-size:11pt; font-weight:500; }
-.axis-block { border:1px solid #dbe2e9; border-radius:6px; padding:11px 13px; margin-bottom:9px;
+.axis-block { border:1px solid $LINE; border-radius:6px; padding:11px 13px; margin-bottom:9px;
   page-break-inside: avoid; }
 .axis-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
 .axis-head h4 { flex:1; }
 .swatch { width:10px; height:10px; border-radius:2px; display:inline-block; }
 .axis-score { font-size:12pt; font-weight:500; }
 dl { margin:0; display:grid; grid-template-columns:32mm 1fr; gap:3px 10px; font-size:9.5pt; }
-dt { color:#6b7d8d; font-size:9pt; }
+dt { color:$MUTED; font-size:9pt; }
 dd { margin:0; }
-.init { border:1px solid #dbe2e9; border-radius:6px; padding:11px 13px; margin-bottom:9px;
+.init { border:1px solid $LINE; border-radius:6px; padding:11px 13px; margin-bottom:9px;
   page-break-inside: avoid; }
 .init-head { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
 .init-head h4 { flex:1; }
-.prio { font-family:"IBM Plex Mono",monospace; font-size:8.5pt; background:#1e3a5c; color:#fff;
+.prio { font-family:"IBM Plex Mono",monospace; font-size:8.5pt; background:$PRIMARY; color:#fff;
   padding:2px 7px; border-radius:4px; }
 .lanes { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-.lane { border:1px solid #dbe2e9; border-radius:6px; overflow:hidden; }
-.lane-head { background:#f6f8fa; padding:7px 9px; border-bottom:1px solid #dbe2e9; font-size:9pt;
+.lane { border:1px solid $LINE; border-radius:6px; overflow:hidden; }
+.lane-head { background:$SURFACE; padding:7px 9px; border-bottom:1px solid $LINE; font-size:9pt;
   display:flex; justify-content:space-between; gap:6px; }
 .lane ul { margin:0; padding:8px 9px; padding-inline-start:20px; font-size:9pt; }
 .lane li { margin-bottom:4px; }
-.doc-footer { margin-top:16px; padding-top:8px; border-top:1px solid #dbe2e9;
-  font-size:8.5pt; color:#6b7d8d; }
+.doc-footer { margin-top:16px; padding-top:8px; border-top:1px solid $LINE;
+  font-size:8.5pt; color:$MUTED; }
 """
 
 

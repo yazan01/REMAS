@@ -65,6 +65,8 @@ class ResponseOut(BaseModel):
     override_score: int | None = None
     override_reason: str | None = None
     effective_score: int | None = None
+    assigned_to_id: str | None = None
+    due_at: datetime | None = None
     updated_at: datetime
 
 
@@ -94,6 +96,7 @@ class ProgressOut(BaseModel):
     unanswered_mandatory: int
     completion: float
     can_submit: bool
+    overdue: int = 0
     axes: list[AxisProgress]
 
 

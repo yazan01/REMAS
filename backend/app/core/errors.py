@@ -58,6 +58,52 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "نوع الملف غير مدعوم. المسموح: PDF، DOCX، XLSX، PPTX، PNG، JPG.",
         "Unsupported file type. Allowed: PDF, DOCX, XLSX, PPTX, PNG, JPG.",
     ),
+    "auth.reset_expired": ("انتهت صلاحية رابط استعادة كلمة المرور.", "This password reset link has expired."),
+    "auth.invite_expired": ("انتهت صلاحية الدعوة.", "This invitation has expired."),
+    "auth.mfa_not_enrolled": ("لم يتم تفعيل التحقق بخطوتين بعد.", "Two-factor authentication is not set up yet."),
+    "auth.mfa_invalid": ("رمز التحقق غير صحيح.", "That verification code is not correct."),
+    "auth.mfa_required": ("مطلوب رمز التحقق بخطوتين.", "A two-factor code is required."),
+    "auth.mfa_required_for_role": (
+        "لا يمكن تعطيل التحقق بخطوتين لحسابات المسؤولين.",
+        "Two-factor authentication cannot be disabled for administrator accounts.",
+    ),
+    "framework.version_locked": (
+        "لا يمكن تعديل نسخة منشورة. أنشئ نسخة جديدة منها ثم عدّلها.",
+        "A published version cannot be edited. Clone it into a new draft first.",
+    ),
+    "framework.code_taken": ("رمز الإطار مستخدم مسبقاً.", "That framework code is already in use."),
+    "framework.version_taken": ("رقم النسخة مستخدم مسبقاً.", "That version number is already in use."),
+    "framework.empty_version": ("لا يمكن نشر نسخة بلا محاور.", "A version with no pillars cannot be published."),
+    "scoring.unknown_formula": ("معادلة احتساب غير معروفة.", "Unknown scoring formula."),
+    "scoring.unknown_na_handling": ("طريقة معالجة «غير منطبق» غير معروفة.", "Unknown not-applicable handling."),
+    "import.empty_file": ("الملف فارغ أو لا يحتوي على صفوف صالحة.", "The file is empty or has no usable rows."),
+    "import.unsupported_format": (
+        "صيغة غير مدعومة. استخدم XLSX أو CSV.",
+        "Unsupported format. Use XLSX or CSV.",
+    ),
+    "ai.disabled": ("خدمة التحليل الآلي معطّلة.", "Automated analysis is disabled."),
+    "ai.finding_not_found": ("الملاحظة غير موجودة.", "Finding not found."),
+    "layer.feature_not_included": (
+        "هذه الميزة غير متضمّنة في طبقة الخدمة المختارة.",
+        "This feature is not included in the selected service layer.",
+    ),
+    "roadmap.initiative_not_found": ("المبادرة غير موجودة.", "Initiative not found."),
+    "report.render_failed": ("تعذّر توليد التقرير.", "The report could not be generated."),
+    "assessment.override_not_permitted": (
+        "التقديم رغم النقص يتطلب صلاحية iValue.",
+        "Submitting with gaps requires iValue authorisation.",
+    ),
+    "report.template_not_found": ("قالب التقرير غير موجود.", "Report template not found."),
+    "report.template_code_taken": ("رمز القالب مستخدم مسبقاً.", "That template code is already in use."),
+    "report.unknown_section": (
+        "قسم غير معروف في قالب التقرير.",
+        "Unknown section in the report template.",
+    ),
+    "expert_session.not_found": ("جلسة الخبير غير موجودة.", "Expert session not found."),
+    "document.not_previewable": (
+        "لا يمكن معاينة هذا النوع من الملفات — استخدم التحميل.",
+        "This file type cannot be previewed; download it instead.",
+    ),
     "validation.failed": ("البيانات المُرسلة غير صالحة.", "The submitted data is not valid."),
     "server.error": ("حدث خطأ غير متوقع.", "Something went wrong."),
 }
@@ -102,7 +148,7 @@ async def validation_error_handler(_request: Request, exc: Exception) -> JSONRes
         message_ar = "يلزم كتابة مبرر عند اختيار «غير منطبق»."
         message_en = "A rationale is required when marking a question not applicable."
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={
             "code": "validation.failed",
             "message_ar": message_ar,

@@ -118,16 +118,24 @@ export default function DashboardPage() {
                         {num(assessment.overall_score)} / 5
                       </span>
                     )}
-                    <Link
-                      href={
-                        done
-                          ? `/assessments/${assessment.id}/results`
-                          : `/assessments/${assessment.id}`
-                      }
-                      className="btn btn-secondary btn-sm push"
-                    >
-                      {done ? t("assessment.viewResults") : t("assessment.open")}
-                    </Link>
+                    <div className="row row-tight push">
+                      <Link
+                        href={`/assessments/${assessment.id}/evidence`}
+                        className="btn btn-ghost btn-sm"
+                      >
+                        {t("nav.evidence")}
+                      </Link>
+                      <Link
+                        href={
+                          done
+                            ? `/assessments/${assessment.id}/results`
+                            : `/assessments/${assessment.id}`
+                        }
+                        className="btn btn-secondary btn-sm"
+                      >
+                        {done ? t("assessment.viewResults") : t("assessment.open")}
+                      </Link>
+                    </div>
                   </div>
                   <div className="row row-tight">
                     <div className="meter">

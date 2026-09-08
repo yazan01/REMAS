@@ -956,3 +956,70 @@ tbody tr:hover td {
     display: none;
   }
 }
+
+/* ───────────────────── question maturity criteria (FR-08) ───────────────── */
+
+.criteria {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.criteria-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  font-size: var(--text-sm);
+}
+.criteria-row dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-weight: 500;
+}
+.criteria-row dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+.crit-n {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  color: var(--on-brand);
+  flex: none;
+}
+.crit-n[data-level="1"] { background: var(--m-1); color: var(--ink); }
+.crit-n[data-level="2"] { background: var(--m-2); color: var(--ink); }
+.crit-n[data-level="3"] { background: var(--m-3); }
+.crit-n[data-level="4"] { background: var(--m-4); }
+.crit-n[data-level="5"] { background: var(--m-5); }
+
+@media (max-width: 640px) {
+  .criteria-row { grid-template-columns: 1fr; gap: var(--space-1); }
+}
+
+/* ───────────────────────── document preview modal ───────────────────────── */
+
+.preview-frame {
+  width: 100%;
+  height: min(70vh, 720px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.preview-image {
+  max-width: 100%;
+  max-height: min(70vh, 720px);
+  display: block;
+  margin-inline: auto;
+  border-radius: var(--radius-sm);
+}

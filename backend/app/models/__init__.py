@@ -27,10 +27,22 @@ from app.models.initiatives import (
     ReportRender,
     RoadmapHorizon,
 )
+from app.models.governance import (
+    DEFAULT_BRANDING,
+    DEFAULT_SECTIONS,
+    REPORT_SECTIONS,
+    ExpertSession,
+    ReportTemplate,
+)
 from app.models.tenancy import Organization, User
 
 __all__ = [
     "AIFinding",
+    "DEFAULT_BRANDING",
+    "DEFAULT_SECTIONS",
+    "REPORT_SECTIONS",
+    "ExpertSession",
+    "ReportTemplate",
     "AIJob",
     "Assessment",
     "AssessmentStatus",

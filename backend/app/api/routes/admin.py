@@ -348,9 +348,9 @@ def update_scoring_config(
     config = dict(version.scoring_config or DEFAULT_SCORING_CONFIG)
     changes = payload.model_dump(exclude_none=True)
     if "formula" in changes and changes["formula"] not in ("weighted_average", "brd_literal"):
-        raise APIError("scoring.unknown_formula", status.HTTP_422_UNPROCESSABLE_ENTITY)
+        raise APIError("scoring.unknown_formula", status.HTTP_422_UNPROCESSABLE_CONTENT)
     if "na_handling" in changes and changes["na_handling"] not in ("exclude", "zero"):
-        raise APIError("scoring.unknown_na_handling", status.HTTP_422_UNPROCESSABLE_ENTITY)
+        raise APIError("scoring.unknown_na_handling", status.HTTP_422_UNPROCESSABLE_CONTENT)
     config.update(changes)
     version.scoring_config = config
     audit.record(
@@ -672,6 +672,12 @@ IMPORT_COLUMNS = {
     "weight": ("weight", "question_weight", "الوزن"),
     "is_mandatory": ("is_mandatory", "mandatory", "إلزامي"),
     "evidence_required": ("evidence_required", "requires_evidence", "دليل مطلوب"),
+    # FR-08 - per-level maturity criteria, one column per level.
+    "criteria_1": ("criteria_1", "level_1", "المستوى_1", "معيار_1"),
+    "criteria_2": ("criteria_2", "level_2", "المستوى_2", "معيار_2"),
+    "criteria_3": ("criteria_3", "level_3", "المستوى_3", "معيار_3"),
+    "criteria_4": ("criteria_4", "level_4", "المستوى_4", "معيار_4"),
+    "criteria_5": ("criteria_5", "level_5", "المستوى_5", "معيار_5"),
 }
 
 
@@ -716,7 +722,7 @@ async def import_content(
         try:
             header = next(iterator)
         except StopIteration:
-            raise APIError("import.empty_file", status.HTTP_422_UNPROCESSABLE_ENTITY) from None
+            raise APIError("import.empty_file", status.HTTP_422_UNPROCESSABLE_CONTENT) from None
         mapping = {i: _normalise_header(str(h or "")) for i, h in enumerate(header)}
         for values in iterator:
             row = {
@@ -742,7 +748,7 @@ async def import_content(
         raise APIError("import.unsupported_format", status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
     if not rows:
-        raise APIError("import.empty_file", status.HTTP_422_UNPROCESSABLE_ENTITY)
+        raise APIError("import.empty_file", status.HTTP_422_UNPROCESSABLE_CONTENT)
 
     if replace:
         for axis in list(version.axes):
@@ -782,6 +788,19 @@ async def import_content(
             skipped.append(f"row {index}: missing question code or text")
             continue
 
+        criteria = {}
+        for level in range(1, 6):
+            value = row.get(f"criteria_{level}")
+            if value:
+                text = str(value).strip()
+                # One column carries both languages when split by | ;
+                # otherwise the same text serves both.
+                if "|" in text:
+                    ar, en = (part.strip() for part in text.split("|", 1))
+                else:
+                    ar = en = text
+                criteria[str(level)] = {"ar": ar, "en": en}
+
         db.add(
             Question(
                 axis_id=axis.id,
@@ -796,6 +815,7 @@ async def import_content(
                 weight=float(row.get("weight") or 1.0),
                 is_mandatory=_truthy(row.get("is_mandatory", True)),
                 evidence_required=_truthy(row.get("evidence_required", False)),
+                criteria=criteria or None,
             )
         )
         created_questions += 1
@@ -826,7 +846,9 @@ def import_template(_u: User = Depends(require_ivalue)) -> StreamingResponse:
     writer.writerow(
         ["AX01", "الحوكمة المؤسسية", "Corporate Governance", "1.2", "AX01-Q1",
          "هل يوجد ميثاق حوكمة معتمد؟", "Is there an approved governance charter?",
-         "", "", "ميثاق الحوكمة", "Governance charter", "1.5", "yes", "yes"]
+         "", "", "ميثاق الحوكمة", "Governance charter", "1.5", "yes", "yes",
+         "لا يوجد | None", "متفرّق | Scattered", "جزئي | Partial",
+         "منهجي | Systematic", "متكامل | Integrated"]
     )
     buffer.seek(0)
     return StreamingResponse(

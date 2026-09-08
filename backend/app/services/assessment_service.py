@@ -194,7 +194,225 @@ def progress(db: Session, assessment: Assessment) -> dict[str, Any]:
         "completion": round(answered / total, 4) if total else 0.0,
         "can_submit": mandatory_open == 0 and answered > 0,
         "axes": per_axis,
+        "overdue": len(overdue_items(db, assessment)),
     }
+
+
+def _is_overdue(response, assessment_due, now) -> bool:
+    """Unanswered past its deadline. An answered question is never overdue."""
+    if response is not None and response.is_answered:
+        return False
+    from app.core.security import as_aware
+
+    deadline = as_aware(response.due_at) if response is not None and response.due_at else None
+    deadline = deadline or as_aware(assessment_due)
+    return bool(deadline and deadline < now)
+
+
+def progress_by_user(db: Session, assessment: Assessment) -> list[dict[str, Any]]:
+    """FR-12 - completion by user, over the questions assigned to each of them."""
+    from app.core.security import utcnow
+    from app.models import User as UserModel
+
+    now = utcnow()
+    responses = _responses_by_question(db, assessment.id)
+    questions = [q for axis in selected_axes(db, assessment) for q in axis.questions]
+
+    buckets: dict[str | None, dict[str, Any]] = {}
+    for question in questions:
+        response = responses.get(question.id)
+        owner = response.assigned_to_id if response else None
+        bucket = buckets.setdefault(
+            owner, {"user_id": owner, "assigned": 0, "answered": 0, "overdue": 0}
+        )
+        bucket["assigned"] += 1
+        if response and response.is_answered:
+            bucket["answered"] += 1
+        if _is_overdue(response, assessment.due_at, now):
+            bucket["overdue"] += 1
+
+    out: list[dict[str, Any]] = []
+    for owner, bucket in buckets.items():
+        user = db.get(UserModel, owner) if owner else None
+        bucket["full_name"] = user.full_name if user else None
+        bucket["email"] = user.email if user else None
+        bucket["completion"] = (
+            round(bucket["answered"] / bucket["assigned"], 4) if bucket["assigned"] else 0.0
+        )
+        out.append(bucket)
+    out.sort(key=lambda b: (b["user_id"] is None, -b["overdue"], b["completion"]))
+    return out
+
+
+def overdue_items(db: Session, assessment: Assessment) -> list[dict[str, Any]]:
+    """FR-12 - the overdue list the reviewer progress view needs."""
+    from app.core.security import as_aware, utcnow
+    from app.models import User as UserModel
+
+    now = utcnow()
+    responses = _responses_by_question(db, assessment.id)
+    out: list[dict[str, Any]] = []
+    for axis in selected_axes(db, assessment):
+        for question in axis.questions:
+            response = responses.get(question.id)
+            if not _is_overdue(response, assessment.due_at, now):
+                continue
+            owner = (
+                db.get(UserModel, response.assigned_to_id)
+                if response and response.assigned_to_id
+                else None
+            )
+            deadline = (
+                as_aware(response.due_at)
+                if response and response.due_at
+                else as_aware(assessment.due_at)
+            )
+            out.append(
+                {
+                    "question_id": question.id,
+                    "question_code": question.code,
+                    "axis_id": axis.id,
+                    "axis_code": axis.code,
+                    "assigned_to": owner.full_name if owner else None,
+                    "assigned_to_email": owner.email if owner else None,
+                    "due_at": deadline.isoformat() if deadline else None,
+                    "days_overdue": (now - deadline).days if deadline else None,
+                    "is_mandatory": question.is_mandatory,
+                }
+            )
+    out.sort(key=lambda r: -(r["days_overdue"] or 0))
+    return out
+
+
+def prior_assessment(db: Session, assessment: Assessment) -> Assessment | None:
+    """The organisation previous completed assessment on the same framework -
+    what the report comparison section needs."""
+    stmt = (
+        select(Assessment)
+        .where(
+            Assessment.organization_id == assessment.organization_id,
+            Assessment.id != assessment.id,
+            Assessment.framework_version_id == assessment.framework_version_id,
+            Assessment.submitted_at.isnot(None),
+        )
+        .order_by(Assessment.submitted_at.desc())
+    )
+    if assessment.submitted_at:
+        stmt = stmt.where(Assessment.submitted_at < assessment.submitted_at)
+    return db.scalars(stmt).first()
+
+
+def comparison(db: Session, assessment: Assessment) -> dict[str, Any] | None:
+    """Axis-by-axis delta against the previous assessment, or None if this is
+    the organisation first."""
+    previous = prior_assessment(db, assessment)
+    if previous is None:
+        return None
+
+    latest_run = db.scalars(
+        select(ScoringRun)
+        .where(ScoringRun.assessment_id == previous.id)
+        .order_by(ScoringRun.created_at.desc())
+    ).first()
+    old = (
+        latest_run.result
+        if latest_run and latest_run.result
+        else calculate(db, previous).as_dict()
+    )
+    new = calculate(db, assessment).as_dict()
+
+    old_by_axis = {row["axis_id"]: row for row in old["axes"]}
+    axes = []
+    for row in new["axes"]:
+        before = old_by_axis.get(row["axis_id"])
+        if not before or before.get("score") is None or row.get("score") is None:
+            continue
+        axes.append(
+            {
+                "axis_id": row["axis_id"],
+                "code": row["code"],
+                "previous": before["score"],
+                "current": row["score"],
+                "delta": round(row["score"] - before["score"], 2),
+            }
+        )
+
+    overall_delta = None
+    if old.get("overall_score") is not None and new.get("overall_score") is not None:
+        overall_delta = round(new["overall_score"] - old["overall_score"], 2)
+
+    return {
+        "previous_assessment_id": previous.id,
+        "previous_name": previous.name,
+        "previous_submitted_at": previous.submitted_at.isoformat()
+        if previous.submitted_at
+        else None,
+        "previous_overall": old.get("overall_score"),
+        "current_overall": new.get("overall_score"),
+        "overall_delta": overall_delta,
+        "axes": axes,
+    }
+
+
+def review_deltas(db: Session, assessment: Assessment, threshold: int = 1) -> list[dict[str, Any]]:
+    """FR-24 — material score differences between the customer's answer and the
+    reviewer's override. A difference of `threshold` levels or more is material."""
+    rows = db.scalars(
+        select(Response).where(
+            Response.assessment_id == assessment.id, Response.override_score.isnot(None)
+        )
+    )
+    out: list[dict[str, Any]] = []
+    for response in rows:
+        question = db.get(Question, response.question_id)
+        if question is None or response.score is None:
+            continue
+        delta = response.override_score - response.score
+        if abs(delta) < threshold:
+            continue
+        axis = db.get(Axis, question.axis_id)
+        out.append(
+            {
+                "question_id": question.id,
+                "question_code": question.code,
+                "axis_id": question.axis_id,
+                "axis_code": axis.code if axis else None,
+                "customer_score": response.score,
+                "reviewer_score": response.override_score,
+                "delta": delta,
+                "reason": response.override_reason,
+                "is_material": abs(delta) >= 2,
+            }
+        )
+    out.sort(key=lambda r: -abs(r["delta"]))
+    return out
+
+
+def clarification_items(db: Session, assessment: Assessment) -> list[dict[str, Any]]:
+    """FR-24 — questions whose evidence a reviewer or the AI has flagged."""
+    from app.models import Document
+
+    flagged = {EvidenceStatus.REQUIRES_CLARIFICATION, EvidenceStatus.REJECTED}
+    out: list[dict[str, Any]] = []
+    for link in db.scalars(
+        select(DocumentLink).where(
+            DocumentLink.assessment_id == assessment.id, DocumentLink.status.in_(flagged)
+        )
+    ):
+        question = db.get(Question, link.question_id)
+        document = db.get(Document, link.document_id)
+        out.append(
+            {
+                "question_id": link.question_id,
+                "question_code": question.code if question else None,
+                "axis_id": question.axis_id if question else None,
+                "document_id": link.document_id,
+                "filename": document.filename if document else None,
+                "status": link.status,
+                "reviewer_note": link.reviewer_note,
+            }
+        )
+    return out
 
 
 def missing_questions(db: Session, assessment: Assessment) -> list[Question]:

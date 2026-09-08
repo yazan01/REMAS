@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -221,6 +221,11 @@ def save_responses(
 @router.post("/{assessment_id}/submit", response_model=ScoringOut)
 def submit(
     request: Request,
+    override_incomplete: bool = Query(
+        default=False,
+        description="Submit despite unanswered mandatory questions. iValue only (FR-10).",
+    ),
+    override_reason: str | None = Query(default=None),
     assessment: Assessment = Depends(get_assessment),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -228,10 +233,23 @@ def submit(
     _assert_open(assessment)
     outstanding = assessment_service.missing_questions(db, assessment)
     if outstanding:
-        raise APIError(
-            "assessment.mandatory_incomplete",
-            status.HTTP_409_CONFLICT,
-            {"question_codes": [q.code for q in outstanding][:20], "count": len(outstanding)},
+        # FR-10 allows submission with gaps only under an authorised override.
+        if not override_incomplete:
+            raise APIError(
+                "assessment.mandatory_incomplete",
+                status.HTTP_409_CONFLICT,
+                {"question_codes": [q.code for q in outstanding][:20], "count": len(outstanding)},
+            )
+        if user.role not in IVALUE_ROLES:
+            raise APIError("assessment.override_not_permitted", status.HTTP_403_FORBIDDEN)
+        audit.record(
+            db,
+            action="assessment.submitted_with_override",
+            entity_type="assessment",
+            entity_id=assessment.id,
+            actor=user,
+            payload={"missing": len(outstanding), "reason": override_reason},
+            ip_address=client_ip(request),
         )
 
     version = db.get(FrameworkVersion, assessment.framework_version_id)
@@ -372,3 +390,133 @@ def list_selected_axes(
         }
         for axis in axes
     ]
+
+
+@router.get("/{assessment_id}/review", response_model=dict)
+def review_view(
+    assessment: Assessment = Depends(get_assessment),
+    user: User = Depends(require_ivalue),
+    db: Session = Depends(get_db),
+) -> dict:
+    """The iValue reviewer's working view (FR-12 / FR-24): completion, the
+    material differences between customer and reviewer scores, and every item
+    still awaiting clarification."""
+    return {
+        "assessment": {
+            "id": assessment.id,
+            "name": assessment.name,
+            "layer": assessment.layer,
+            "status": assessment.status,
+            "organization_id": assessment.organization_id,
+            "submitted_at": assessment.submitted_at.isoformat()
+            if assessment.submitted_at
+            else None,
+        },
+        "progress": assessment_service.progress(db, assessment),
+        "by_user": assessment_service.progress_by_user(db, assessment),
+        "overdue": assessment_service.overdue_items(db, assessment),
+        "score_deltas": assessment_service.review_deltas(db, assessment),
+        "clarifications": assessment_service.clarification_items(db, assessment),
+        "comparison": assessment_service.comparison(db, assessment),
+    }
+
+
+@router.get("/{assessment_id}/questions", response_model=list[dict])
+def filtered_questions(
+    axis_id: str | None = Query(default=None),
+    answered: bool | None = Query(default=None),
+    mandatory_only: bool = Query(default=False),
+    evidence_status: str | None = Query(default=None),
+    flagged: bool = Query(default=False, description="has an AI or reviewer flag"),
+    q: str | None = Query(default=None, description="matches question text or evidence name"),
+    assessment: Assessment = Depends(get_assessment),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """FR-11 — the full filter set: axis, completion status, evidence status,
+    expected evidence name, mandatory items, and AI/reviewer flags."""
+    from app.models import AIFinding, DocumentLink
+
+    responses = {
+        r.question_id: r
+        for r in db.scalars(select(Response).where(Response.assessment_id == assessment.id))
+    }
+    links: dict[str, list] = {}
+    for link in db.scalars(
+        select(DocumentLink).where(DocumentLink.assessment_id == assessment.id)
+    ):
+        links.setdefault(link.question_id, []).append(link)
+    flags: set[str] = {
+        f.question_id
+        for f in db.scalars(
+            select(AIFinding).where(
+                AIFinding.assessment_id == assessment.id, AIFinding.question_id.isnot(None)
+            )
+        )
+        if f.severity in ("medium", "high")
+    }
+    for response in responses.values():
+        if response.override_score is not None:
+            flags.add(response.question_id)
+
+    needle = (q or "").strip().lower()
+    out: list[dict] = []
+    for axis in assessment_service.selected_axes(db, assessment):
+        if axis_id and axis.id != axis_id:
+            continue
+        for question in axis.questions:
+            response = responses.get(question.id)
+            is_answered = bool(response and response.is_answered)
+            question_links = links.get(question.id, [])
+            statuses = [link.status for link in question_links]
+            current_status = statuses[0] if statuses else "missing"
+
+            if answered is not None and is_answered != answered:
+                continue
+            if mandatory_only and not question.is_mandatory:
+                continue
+            if evidence_status and current_status != evidence_status:
+                continue
+            if flagged and question.id not in flags:
+                continue
+            if needle:
+                haystack = " ".join(
+                    filter(
+                        None,
+                        [
+                            question.text_ar,
+                            question.text_en,
+                            question.evidence_hint_ar,
+                            question.evidence_hint_en,
+                            question.code,
+                        ],
+                    )
+                ).lower()
+                if needle not in haystack:
+                    continue
+
+            out.append(
+                {
+                    "question_id": question.id,
+                    "code": question.code,
+                    "axis_id": axis.id,
+                    "axis_code": axis.code,
+                    "text_ar": question.text_ar,
+                    "text_en": question.text_en,
+                    "evidence_hint_ar": question.evidence_hint_ar,
+                    "evidence_hint_en": question.evidence_hint_en,
+                    "is_mandatory": question.is_mandatory,
+                    "evidence_required": question.evidence_required,
+                    "answered": is_answered,
+                    "score": response.score if response else None,
+                    "effective_score": response.effective_score if response else None,
+                    "is_not_applicable": bool(response and response.is_not_applicable),
+                    "evidence_status": current_status,
+                    "evidence_count": len(question_links),
+                    "flagged": question.id in flags,
+                    "assigned_to_id": response.assigned_to_id if response else None,
+                    "due_at": response.due_at.isoformat()
+                    if response and response.due_at
+                    else None,
+                }
+            )
+    return out

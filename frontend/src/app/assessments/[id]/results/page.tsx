@@ -22,6 +22,8 @@ export default function ResultsPage() {
   const { t, pick, num, locale } = useLocale();
   const { me, loading } = useRequireSession();
   const params = useParams<{ id: string }>();
+  const isStaff =
+    !!me && (me.user.role === "ivalue_admin" || me.user.role === "ivalue_reviewer");
 
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [framework, setFramework] = useState<FrameworkVersion | null>(null);
@@ -88,11 +90,21 @@ export default function ResultsPage() {
           <span className="eyebrow">{assessment.name}</span>
           <h1>{t("results.title")}</h1>
         </div>
-        {assessment.submitted_at && (
-          <span className="chip mono">
-            {t("results.assessmentDate")} {assessment.submitted_at.slice(0, 10)}
-          </span>
-        )}
+        <div className="row row-tight">
+          {assessment.submitted_at && (
+            <span className="chip mono">
+              {t("results.assessmentDate")} {assessment.submitted_at.slice(0, 10)}
+            </span>
+          )}
+          <Link href={`/assessments/${params.id}/insights`} className="btn btn-primary btn-sm">
+            {t("ai.title")}
+          </Link>
+          {isStaff && (
+            <Link href={`/assessments/${params.id}/review`} className="btn btn-secondary btn-sm">
+              {t("review.title")}
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* headline numbers */}

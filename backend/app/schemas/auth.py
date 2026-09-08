@@ -19,6 +19,7 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: EmailStr
     password: str
+    mfa_code: str | None = None
 
 
 class VerifyIn(BaseModel):
@@ -41,6 +42,7 @@ class UserOut(BaseModel):
     locale: str
     email_verified_at: datetime | None = None
     organization_id: str
+    mfa_enabled: bool = False
 
 
 class MeOut(BaseModel):
