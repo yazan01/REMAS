@@ -416,6 +416,28 @@ export type AdminFramework = {
   }>;
 };
 
+export type AdminUser = {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  mfa_enabled: boolean;
+  email_verified: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  organization_id: string;
+  organization_name_ar: string | null;
+  organization_name_en: string | null;
+};
+
+export type AdminUserListing = {
+  count: number;
+  offset: number;
+  roles: string[];
+  items: AdminUser[];
+};
+
 export type AdminOrganization = {
   id: string;
   slug: string;

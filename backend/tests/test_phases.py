@@ -652,3 +652,94 @@ def test_question_filters(client, owner):
 
     unique = client.get(base, headers=owner, params={"q": axis["questions"][4]["code"]}).json()
     assert len(unique) == 1
+
+
+# ─────────────── administration portal: user register (FR-31) ───────────────
+
+
+def test_user_register_lists_across_tenants(client, admin):
+    res = client.get(f"{API}/admin/users?limit=500", headers=admin)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    emails = {row["email"] for row in body["items"]}
+    # Both sides of the platform in one list — that is the point of the register.
+    assert "admin@ivalueconsult.com" in emails
+    assert "owner@demodeveloper.com" in emails
+    assert "ivalue_admin" in body["roles"]
+    owner_row = next(r for r in body["items"] if r["email"] == "owner@demodeveloper.com")
+    assert owner_row["organization_name_ar"]
+
+
+def test_user_register_filters(client, admin):
+    res = client.get(f"{API}/admin/users?q=owner", headers=admin)
+    assert res.status_code == 200
+    assert all("owner" in r["email"] or "owner" in r["full_name"].lower()
+               for r in res.json()["items"])
+
+    res = client.get(f"{API}/admin/users?role=ivalue_admin", headers=admin)
+    assert {r["role"] for r in res.json()["items"]} == {"ivalue_admin"}
+
+
+def test_reviewer_may_read_but_not_write_the_register(client, reviewer, admin):
+    assert client.get(f"{API}/admin/users", headers=reviewer).status_code == 200
+
+    target = next(
+        r for r in client.get(f"{API}/admin/users", headers=admin).json()["items"]
+        if r["email"] == "owner@demodeveloper.com"
+    )
+    res = client.patch(
+        f"{API}/admin/users/{target['id']}", json={"is_active": False}, headers=reviewer
+    )
+    assert res.status_code == 403
+
+
+def test_suspend_and_restore_a_user(client, admin):
+    users = client.get(f"{API}/admin/users", headers=admin).json()["items"]
+    target = next(r for r in users if r["email"] == "owner@demodeveloper.com")
+
+    assert client.patch(
+        f"{API}/admin/users/{target['id']}", json={"is_active": False}, headers=admin
+    ).json()["is_active"] is False
+    # A suspended account cannot come back in through the front door.
+    denied = client.post(
+        f"{API}/auth/login", json={"email": target["email"], "password": PASSWORD}
+    )
+    assert denied.status_code == 403
+    assert denied.json()["code"] == "auth.account_disabled"
+
+    assert client.patch(
+        f"{API}/admin/users/{target['id']}", json={"is_active": True}, headers=admin
+    ).json()["is_active"] is True
+    assert client.post(
+        f"{API}/auth/login", json={"email": target["email"], "password": PASSWORD}
+    ).status_code == 200
+
+
+def test_admin_cannot_lock_itself_out(client, admin):
+    me = client.get(f"{API}/auth/me", headers=admin).json()["user"]
+    assert client.patch(
+        f"{API}/admin/users/{me['id']}", json={"is_active": False}, headers=admin
+    ).status_code == 409
+    assert client.patch(
+        f"{API}/admin/users/{me['id']}", json={"role": "viewer"}, headers=admin
+    ).status_code == 409
+
+
+def test_unknown_role_is_rejected(client, admin):
+    users = client.get(f"{API}/admin/users", headers=admin).json()["items"]
+    target = next(r for r in users if r["email"] == "owner@demodeveloper.com")
+    res = client.patch(
+        f"{API}/admin/users/{target['id']}", json={"role": "superuser"}, headers=admin
+    )
+    assert res.status_code == 422
+    assert res.json()["code"] == "auth.unknown_role"
+
+
+def test_horizons_can_be_read_before_they_are_rewritten(client, admin):
+    """The editor screen needs a GET; the PUT replaces the whole set."""
+    version = client.get(f"{API}/frameworks/current", headers=admin).json()
+    res = client.get(f"{API}/admin/versions/{version['id']}/horizons", headers=admin)
+    assert res.status_code == 200, res.text
+    horizons = res.json()
+    assert horizons and horizons == sorted(horizons, key=lambda h: h["order_index"])
+    assert {"code", "name_ar", "name_en", "months_from", "months_to"} <= set(horizons[0])

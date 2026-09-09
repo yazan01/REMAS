@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ErrorNote, Loading } from "@/components/AuthShell";
+import { AdminUsers } from "@/components/admin/AdminUsers";
+import { ContentEditor } from "@/components/admin/ContentEditor";
 import { ReportTemplates } from "@/components/ReportTemplates";
 import { useLocale } from "@/i18n/LocaleProvider";
 import type { MessageKey } from "@/i18n/messages";
@@ -18,7 +20,8 @@ import {
 import { useRequireSession } from "@/lib/session";
 
 const IVALUE_ROLES = new Set(["ivalue_admin", "ivalue_reviewer"]);
-type Tab = "frameworks" | "templates" | "organizations" | "audit";
+type Tab = "frameworks" | "content" | "templates" | "organizations" | "users" | "audit";
+const TABS: Tab[] = ["frameworks", "content", "templates", "organizations", "users", "audit"];
 
 export default function AdminPage() {
   const { t, pick, locale, num } = useLocale();
@@ -52,14 +55,18 @@ export default function AdminPage() {
           <h1>{t("admin.title")}</h1>
         </div>
         <nav className="row row-tight">
-          {(["frameworks", "templates", "organizations", "audit"] as Tab[]).map((key) => (
+          {TABS.map((key) => (
             <button
               key={key}
               type="button"
               className={`btn btn-sm ${tab === key ? "btn-primary" : "btn-ghost"}`}
               onClick={() => setTab(key)}
             >
-              {key === "templates" ? t("template.title") : t(`admin.${key}` as MessageKey)}
+              {key === "templates"
+                ? t("template.title")
+                : key === "users"
+                  ? t("admin.usersTab")
+                  : t(`admin.${key}` as MessageKey)}
             </button>
           ))}
         </nav>
@@ -73,8 +80,12 @@ export default function AdminPage() {
 
       <div style={{ marginBlockStart: "var(--space-5)" }}>
         {tab === "frameworks" && <Frameworks onError={setError} />}
+        {tab === "content" && <ContentEditor onError={setError} />}
         {tab === "templates" && <ReportTemplates onError={setError} />}
         {tab === "organizations" && <Organizations onError={setError} />}
+        {tab === "users" && (
+          <AdminUsers onError={setError} canWrite={me.user.role === "ivalue_admin"} />
+        )}
         {tab === "audit" && <AuditLog onError={setError} />}
       </div>
     </div>
@@ -89,6 +100,8 @@ function Frameworks({ onError }: { onError: (e: ApiError) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [importInto, setImportInto] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState({ code: "", name_ar: "", name_en: "" });
   const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -103,6 +116,32 @@ function Frameworks({ onError }: { onError: (e: ApiError) => void }) {
     setBusy(id);
     try {
       await api(path, { method: "POST", body });
+      await refresh();
+    } catch (err) {
+      if (err instanceof ApiError) onError(err);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function createFramework() {
+    setBusy("new");
+    try {
+      await api("/admin/frameworks", { method: "POST", body: draft });
+      setDraft({ code: "", name_ar: "", name_en: "" });
+      setCreating(false);
+      await refresh();
+    } catch (err) {
+      if (err instanceof ApiError) onError(err);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function setActive(id: string, is_active: boolean) {
+    setBusy(id);
+    try {
+      await api(`/admin/frameworks/${id}`, { method: "PATCH", body: { is_active } });
       await refresh();
     } catch (err) {
       if (err instanceof ApiError) onError(err);
@@ -138,6 +177,13 @@ function Frameworks({ onError }: { onError: (e: ApiError) => void }) {
       <div className="row row-tight">
         <button
           type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => setCreating(!creating)}
+        >
+          {t("admin.newFramework")}
+        </button>
+        <button
+          type="button"
           className="btn btn-secondary btn-sm"
           onClick={() =>
             void downloadFile("/admin/import-template.csv", "remas-import-template.csv")
@@ -147,6 +193,55 @@ function Frameworks({ onError }: { onError: (e: ApiError) => void }) {
         </button>
         {notice && <span className="chip chip-ok">{notice}</span>}
       </div>
+
+      {creating && (
+        <div className="card card-pad stack stack-3">
+          <div className="grid grid-auto-md">
+            <div className="field">
+              <label htmlFor="fw-code">{t("content.code")}</label>
+              <input
+                id="fw-code"
+                dir="ltr"
+                value={draft.code}
+                onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="fw-ar">{t("admin.frameworkNameAr")}</label>
+              <input
+                id="fw-ar"
+                value={draft.name_ar}
+                onChange={(e) => setDraft({ ...draft, name_ar: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="fw-en">{t("admin.frameworkNameEn")}</label>
+              <input
+                id="fw-en"
+                dir="ltr"
+                value={draft.name_en}
+                onChange={(e) => setDraft({ ...draft, name_en: e.target.value })}
+              />
+            </div>
+          </div>
+          {/* A new framework always starts as an empty 0.1 draft with the
+              standard five levels and horizons seeded, so it can be imported
+              into straight away. */}
+          <div className="row row-tight">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              disabled={busy === "new" || draft.code.length < 2 || !draft.name_ar || !draft.name_en}
+              onClick={() => void createFramework()}
+            >
+              {t("admin.create")}
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreating(false)}>
+              {t("common.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
 
       <input
         ref={fileInput}
@@ -165,6 +260,14 @@ function Frameworks({ onError }: { onError: (e: ApiError) => void }) {
             <span className="mono chip chip-brand">{framework.code}</span>
             <h3 style={{ fontSize: "var(--text-lg)" }}>{pick(framework, "name")}</h3>
             {!framework.is_active && <span className="chip chip-warn">{t("admin.archived")}</span>}
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm push"
+              disabled={busy === framework.id}
+              onClick={() => void setActive(framework.id, !framework.is_active)}
+            >
+              {framework.is_active ? t("admin.deactivate") : t("admin.activate")}
+            </button>
           </div>
 
           <div className="table-wrap">

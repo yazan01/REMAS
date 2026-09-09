@@ -154,6 +154,39 @@ def run_engine(playwright, engine: str, shots: Path | None) -> dict:
         note(onboarding_loaded >= 8, "onboarding checklist loaded from the API",
              f"{onboarding_loaded} steps")
 
+        # ── the administration portal: every tab must render its own data ──
+        page.goto(f"{FRONTEND}/admin", wait_until="networkidle")
+        for label, marker in (
+            ("أطر التقييم", "REMAS"),
+            ("المحتوى", "المحاور والأسئلة"),
+            ("قوالب التقارير", None),
+            ("المنشآت", "demo-developer"),
+            ("المستخدمون", "admin@ivalueconsult.com"),
+            ("سجل التدقيق", None),
+        ):
+            page.get_by_role("button", name=label, exact=True).first.click()
+            page.wait_for_timeout(900)
+            ok = marker is None or marker in page.content()
+            note(ok, f"admin tab renders: {label}", "" if ok else f"missing {marker}")
+
+        # The content editor is the deepest screen — open a pillar and confirm
+        # its questions come back from the API rather than an empty accordion.
+        page.get_by_role("button", name="المحتوى", exact=True).first.click()
+        page.wait_for_timeout(1200)
+        question_rows = page.evaluate(
+            "() => document.querySelectorAll('.panel').length"
+        )
+        # The editor opens on the fullest version, so the first pillar's whole
+        # question set must come back — one row would mean it landed on an
+        # empty leftover draft instead.
+        note(question_rows >= 5, "content editor lists questions", f"{question_rows} rows")
+
+        for sub in ("مستويات النضج", "قواعد الاحتساب", "آفاق خارطة الطريق", "مكتبة المبادرات"):
+            page.get_by_role("button", name=sub, exact=True).first.click()
+            page.wait_for_timeout(700)
+            fields = page.evaluate("() => document.querySelectorAll('.field, table tbody tr').length")
+            note(fields > 0, f"content section renders: {sub}", f"{fields} controls")
+
         # ── layout integrity: nothing may scroll the page sideways ─────────
         page.goto(f"{FRONTEND}/dashboard", wait_until="networkidle")
         overflow = page.evaluate(
@@ -172,7 +205,7 @@ def run_engine(playwright, engine: str, shots: Path | None) -> dict:
         # ── nothing may paint outside the card that owns it ────────────────
         # Document-level overflow misses a child bursting out of a bordered
         # container, which is exactly how a long value in a nowrap chip fails.
-        for page_path, width in (("/", 1400), ("/", 1100), ("/dashboard", 1400)):
+        for page_path, width in (("/", 1400), ("/", 1100), ("/dashboard", 1400), ("/admin", 1400)):
             page.set_viewport_size({"width": width, "height": 950})
             page.goto(f"{FRONTEND}{page_path}", wait_until="networkidle")
             page.wait_for_timeout(300)
@@ -225,6 +258,12 @@ def run_engine(playwright, engine: str, shots: Path | None) -> dict:
 
 
 def main() -> None:
+    # Check labels carry Arabic; a cp1252 console would otherwise abort the run
+    # after the browser work is already done.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="REMAS cross-browser acceptance")
     parser.add_argument("--engine", choices=ENGINES, default=None)
     parser.add_argument("--shots", default=None, help="directory for screenshots")

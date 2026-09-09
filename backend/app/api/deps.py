@@ -47,6 +47,14 @@ def require_ivalue(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def require_ivalue_admin(user: User = Depends(get_current_user)) -> User:
+    """Stricter than `require_ivalue`: a reviewer may read and review, but only
+    an administrator may change who can log in or what role they hold."""
+    if user.role != UserRole.IVALUE_ADMIN:
+        raise APIError("auth.forbidden", status.HTTP_403_FORBIDDEN)
+    return user
+
+
 def can_manage_org(user: User) -> bool:
     return user.role in ORG_MANAGER_ROLES or user.role in IVALUE_ROLES
 

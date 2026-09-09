@@ -104,6 +104,16 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "لا يمكن معاينة هذا النوع من الملفات — استخدم التحميل.",
         "This file type cannot be previewed; download it instead.",
     ),
+    "auth.user_not_found": ("المستخدم غير موجود.", "User not found."),
+    "auth.unknown_role": ("دور غير معروف.", "Unknown role."),
+    "auth.cannot_demote_self": (
+        "لا يمكنك تعطيل حسابك أو خفض صلاحيتك بنفسك.",
+        "You cannot disable or demote your own account.",
+    ),
+    "auth.last_admin": (
+        "لا يمكن خفض صلاحية آخر مسؤول في المنصة.",
+        "The last platform administrator cannot be demoted.",
+    ),
     "validation.failed": ("البيانات المُرسلة غير صالحة.", "The submitted data is not valid."),
     "server.error": ("حدث خطأ غير متوقع.", "Something went wrong."),
 }
