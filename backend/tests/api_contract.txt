@@ -1,114 +1,118 @@
-# The public HTTP surface of REMAS, one line per method+path.
+# The public HTTP surface of REMAS: one line per operation, as
+#
+#     METHOD /path  [tag]
 #
 # Regenerated deliberately with:  python -m scripts.api_contract --write
-# A refactor must never change this file. If a diff appears here, the
-# refactor moved a URL and every existing client breaks with it.
-DELETE /api/v1/account/mfa
-DELETE /api/v1/admin/axes/{axis_id}
-DELETE /api/v1/admin/initiative-templates/{template_id}
-DELETE /api/v1/admin/questions/{question_id}
-DELETE /api/v1/admin/report-templates/{template_id}
-DELETE /api/v1/documents/{document_id}
-DELETE /api/v1/evidence/{link_id}
-DELETE /api/v1/initiatives/{initiative_id}
-GET /api/v1/account/invitations
-GET /api/v1/account/members
-GET /api/v1/admin/audit
-GET /api/v1/admin/audit/export.csv
-GET /api/v1/admin/frameworks
-GET /api/v1/admin/import-template.csv
-GET /api/v1/admin/organizations
-GET /api/v1/admin/report-templates
-GET /api/v1/admin/settings/ai
-GET /api/v1/admin/users
-GET /api/v1/admin/versions/{version_id}/horizons
-GET /api/v1/admin/versions/{version_id}/initiative-templates
-GET /api/v1/assessments
-GET /api/v1/assessments/{assessment_id}
-GET /api/v1/assessments/{assessment_id}/ai/findings
-GET /api/v1/assessments/{assessment_id}/ai/jobs
-GET /api/v1/assessments/{assessment_id}/axes
-GET /api/v1/assessments/{assessment_id}/comparison
-GET /api/v1/assessments/{assessment_id}/evidence
-GET /api/v1/assessments/{assessment_id}/expert-sessions
-GET /api/v1/assessments/{assessment_id}/layer-features
-GET /api/v1/assessments/{assessment_id}/overdue
-GET /api/v1/assessments/{assessment_id}/progress
-GET /api/v1/assessments/{assessment_id}/progress/by-user
-GET /api/v1/assessments/{assessment_id}/questions
-GET /api/v1/assessments/{assessment_id}/report.html
-GET /api/v1/assessments/{assessment_id}/report.json
-GET /api/v1/assessments/{assessment_id}/report.pdf
-GET /api/v1/assessments/{assessment_id}/reports
-GET /api/v1/assessments/{assessment_id}/responses
-GET /api/v1/assessments/{assessment_id}/results
-GET /api/v1/assessments/{assessment_id}/review
-GET /api/v1/assessments/{assessment_id}/roadmap
-GET /api/v1/auth/me
-GET /api/v1/catalogue/layers
-GET /api/v1/catalogue/pillars
-GET /api/v1/catalogue/preview
-GET /api/v1/documents
-GET /api/v1/documents/categories
-GET /api/v1/documents/{document_id}/download
-GET /api/v1/documents/{document_id}/history
-GET /api/v1/documents/{document_id}/preview
-GET /api/v1/frameworks/current
-GET /api/v1/frameworks/versions/{version_id}
-GET /api/v1/frameworks/versions/{version_id}/axes/{axis_id}/questions
-GET /api/v1/organization
-GET /api/v1/organization/onboarding
-GET /health
-GET /health/ready
-GET /metrics
-GET /metrics/summary
-PATCH /api/v1/admin/axes/{axis_id}
-PATCH /api/v1/admin/frameworks/{framework_id}
-PATCH /api/v1/admin/organizations/{org_id}
-PATCH /api/v1/admin/questions/{question_id}
-PATCH /api/v1/admin/report-templates/{template_id}
-PATCH /api/v1/admin/users/{user_id}
-PATCH /api/v1/admin/versions/{version_id}/scoring
-PATCH /api/v1/ai/findings/{finding_id}
-PATCH /api/v1/assessments/{assessment_id}/due-date
-PATCH /api/v1/auth/me/locale
-PATCH /api/v1/documents/{document_id}
-PATCH /api/v1/evidence/{link_id}/status
-PATCH /api/v1/expert-sessions/{session_id}/complete
-PATCH /api/v1/expert-sessions/{session_id}/schedule
-PATCH /api/v1/initiatives/{initiative_id}
-PATCH /api/v1/organization
-POST /api/v1/account/invitations
-POST /api/v1/account/invitations/accept
-POST /api/v1/account/mfa/confirm
-POST /api/v1/account/mfa/enrol
-POST /api/v1/account/password/change
-POST /api/v1/account/password/reset
-POST /api/v1/account/password/reset-request
-POST /api/v1/admin/axes/{axis_id}/questions
-POST /api/v1/admin/frameworks
-POST /api/v1/admin/report-templates
-POST /api/v1/admin/settings/ai/test
-POST /api/v1/admin/versions/{version_id}/axes
-POST /api/v1/admin/versions/{version_id}/clone
-POST /api/v1/admin/versions/{version_id}/import
-POST /api/v1/admin/versions/{version_id}/initiative-templates
-POST /api/v1/admin/versions/{version_id}/publish
-POST /api/v1/assessments
-POST /api/v1/assessments/{assessment_id}/ai/run
-POST /api/v1/assessments/{assessment_id}/evidence
-POST /api/v1/assessments/{assessment_id}/expert-sessions
-POST /api/v1/assessments/{assessment_id}/initiatives
-POST /api/v1/assessments/{assessment_id}/questions/{question_id}/override
-POST /api/v1/assessments/{assessment_id}/recalculate
-POST /api/v1/assessments/{assessment_id}/report/release
-POST /api/v1/assessments/{assessment_id}/submit
-POST /api/v1/auth/login
-POST /api/v1/auth/register
-POST /api/v1/auth/verify
-POST /api/v1/documents
-PUT /api/v1/admin/settings/ai
-PUT /api/v1/admin/versions/{version_id}/horizons
-PUT /api/v1/admin/versions/{version_id}/levels
-PUT /api/v1/assessments/{assessment_id}/assignments
-PUT /api/v1/assessments/{assessment_id}/responses
+#
+# A refactor must never change this file. A changed path breaks every
+# client that calls it; a changed tag moves the operation into a
+# different class in any client generated from the schema.
+DELETE /api/v1/account/mfa  [account]
+DELETE /api/v1/admin/axes/{axis_id}  [admin]
+DELETE /api/v1/admin/initiative-templates/{template_id}  [admin]
+DELETE /api/v1/admin/questions/{question_id}  [admin]
+DELETE /api/v1/admin/report-templates/{template_id}  [admin]
+DELETE /api/v1/documents/{document_id}  [evidence]
+DELETE /api/v1/evidence/{link_id}  [evidence]
+DELETE /api/v1/initiatives/{initiative_id}  [insights]
+GET /api/v1/account/invitations  [account]
+GET /api/v1/account/members  [account]
+GET /api/v1/admin/audit  [admin]
+GET /api/v1/admin/audit/export.csv  [admin]
+GET /api/v1/admin/frameworks  [admin]
+GET /api/v1/admin/import-template.csv  [admin]
+GET /api/v1/admin/organizations  [admin]
+GET /api/v1/admin/report-templates  [admin]
+GET /api/v1/admin/settings/ai  [admin]
+GET /api/v1/admin/users  [admin]
+GET /api/v1/admin/versions/{version_id}/horizons  [admin]
+GET /api/v1/admin/versions/{version_id}/initiative-templates  [admin]
+GET /api/v1/assessments  [assessments]
+GET /api/v1/assessments/{assessment_id}  [assessments]
+GET /api/v1/assessments/{assessment_id}/ai/findings  [insights]
+GET /api/v1/assessments/{assessment_id}/ai/jobs  [insights]
+GET /api/v1/assessments/{assessment_id}/axes  [assessments]
+GET /api/v1/assessments/{assessment_id}/comparison  [governance]
+GET /api/v1/assessments/{assessment_id}/evidence  [evidence]
+GET /api/v1/assessments/{assessment_id}/expert-sessions  [governance]
+GET /api/v1/assessments/{assessment_id}/layer-features  [insights]
+GET /api/v1/assessments/{assessment_id}/overdue  [governance]
+GET /api/v1/assessments/{assessment_id}/progress  [assessments]
+GET /api/v1/assessments/{assessment_id}/progress/by-user  [governance]
+GET /api/v1/assessments/{assessment_id}/questions  [assessments]
+GET /api/v1/assessments/{assessment_id}/report.html  [insights]
+GET /api/v1/assessments/{assessment_id}/report.json  [insights]
+GET /api/v1/assessments/{assessment_id}/report.pdf  [insights]
+GET /api/v1/assessments/{assessment_id}/reports  [insights]
+GET /api/v1/assessments/{assessment_id}/responses  [assessments]
+GET /api/v1/assessments/{assessment_id}/results  [assessments]
+GET /api/v1/assessments/{assessment_id}/review  [assessments]
+GET /api/v1/assessments/{assessment_id}/roadmap  [insights]
+GET /api/v1/auth/me  [auth]
+GET /api/v1/catalogue/layers  [catalogue]
+GET /api/v1/catalogue/pillars  [catalogue]
+GET /api/v1/catalogue/preview  [catalogue]
+GET /api/v1/documents  [evidence]
+GET /api/v1/documents/categories  [evidence]
+GET /api/v1/documents/{document_id}/download  [evidence]
+GET /api/v1/documents/{document_id}/history  [evidence]
+GET /api/v1/documents/{document_id}/preview  [evidence]
+GET /api/v1/frameworks/current  [frameworks]
+GET /api/v1/frameworks/versions/{version_id}  [frameworks]
+GET /api/v1/frameworks/versions/{version_id}/axes/{axis_id}/questions  [frameworks]
+GET /api/v1/organization  [organization]
+GET /api/v1/organization/onboarding  [organization]
+GET /health  [meta]
+GET /health/ready  [meta]
+GET /metrics  [meta]
+GET /metrics/summary  [meta]
+PATCH /api/v1/admin/axes/{axis_id}  [admin]
+PATCH /api/v1/admin/frameworks/{framework_id}  [admin]
+PATCH /api/v1/admin/organizations/{org_id}  [admin]
+PATCH /api/v1/admin/questions/{question_id}  [admin]
+PATCH /api/v1/admin/report-templates/{template_id}  [admin]
+PATCH /api/v1/admin/users/{user_id}  [admin]
+PATCH /api/v1/admin/versions/{version_id}/scoring  [admin]
+PATCH /api/v1/ai/findings/{finding_id}  [insights]
+PATCH /api/v1/assessments/{assessment_id}/due-date  [governance]
+PATCH /api/v1/auth/me/locale  [auth]
+PATCH /api/v1/documents/{document_id}  [evidence]
+PATCH /api/v1/evidence/{link_id}/status  [evidence]
+PATCH /api/v1/expert-sessions/{session_id}/complete  [governance]
+PATCH /api/v1/expert-sessions/{session_id}/schedule  [governance]
+PATCH /api/v1/initiatives/{initiative_id}  [insights]
+PATCH /api/v1/organization  [organization]
+POST /api/v1/account/invitations  [account]
+POST /api/v1/account/invitations/accept  [account]
+POST /api/v1/account/mfa/confirm  [account]
+POST /api/v1/account/mfa/enrol  [account]
+POST /api/v1/account/password/change  [account]
+POST /api/v1/account/password/reset  [account]
+POST /api/v1/account/password/reset-request  [account]
+POST /api/v1/admin/axes/{axis_id}/questions  [admin]
+POST /api/v1/admin/frameworks  [admin]
+POST /api/v1/admin/report-templates  [admin]
+POST /api/v1/admin/settings/ai/test  [admin]
+POST /api/v1/admin/versions/{version_id}/axes  [admin]
+POST /api/v1/admin/versions/{version_id}/clone  [admin]
+POST /api/v1/admin/versions/{version_id}/import  [admin]
+POST /api/v1/admin/versions/{version_id}/initiative-templates  [admin]
+POST /api/v1/admin/versions/{version_id}/publish  [admin]
+POST /api/v1/assessments  [assessments]
+POST /api/v1/assessments/{assessment_id}/ai/run  [insights]
+POST /api/v1/assessments/{assessment_id}/evidence  [evidence]
+POST /api/v1/assessments/{assessment_id}/expert-sessions  [governance]
+POST /api/v1/assessments/{assessment_id}/initiatives  [insights]
+POST /api/v1/assessments/{assessment_id}/questions/{question_id}/override  [assessments]
+POST /api/v1/assessments/{assessment_id}/recalculate  [assessments]
+POST /api/v1/assessments/{assessment_id}/report/release  [insights]
+POST /api/v1/assessments/{assessment_id}/submit  [assessments]
+POST /api/v1/auth/login  [auth]
+POST /api/v1/auth/register  [auth]
+POST /api/v1/auth/verify  [auth]
+POST /api/v1/documents  [evidence]
+PUT /api/v1/admin/settings/ai  [admin]
+PUT /api/v1/admin/versions/{version_id}/horizons  [admin]
+PUT /api/v1/admin/versions/{version_id}/levels  [admin]
+PUT /api/v1/assessments/{assessment_id}/assignments  [governance]
+PUT /api/v1/assessments/{assessment_id}/responses  [assessments]

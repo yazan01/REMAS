@@ -26,25 +26,36 @@ from pathlib import Path
 CONTRACT = Path(__file__).resolve().parent.parent / "tests" / "api_contract.txt"
 
 HEADER = """\
-# The public HTTP surface of REMAS, one line per method+path.
+# The public HTTP surface of REMAS: one line per operation, as
+#
+#     METHOD /path  [tag]
 #
 # Regenerated deliberately with:  python -m scripts.api_contract --write
-# A refactor must never change this file. If a diff appears here, the
-# refactor moved a URL and every existing client breaks with it.
+#
+# A refactor must never change this file. A changed path breaks every
+# client that calls it; a changed tag moves the operation into a
+# different class in any client generated from the schema.
 """
 
 
 def current_surface() -> list[str]:
-    """Every method+path FastAPI actually publishes, read from the OpenAPI
-    document rather than from `app.routes` — the schema is what clients and the
-    generated docs consume, so it is the contract that matters."""
+    """Every method, path and tag FastAPI actually publishes, read from the
+    OpenAPI document rather than from `app.routes` — the schema is what clients
+    and the generated docs consume, so it is the contract that matters.
+
+    The tag is recorded because it is not decoration. A client generated from
+    this schema groups operations by tag, so moving a route between tags moves
+    a method between generated classes even though its URL never changed. That
+    happened during the report-template move and the first version of this
+    contract, which recorded only method and path, did not notice.
+    """
     from app.main import app
 
     spec = app.openapi()
     return sorted(
-        f"{method.upper()} {path}"
+        f"{method.upper()} {path}  [{','.join(operation.get('tags', []))}]"
         for path, operations in spec["paths"].items()
-        for method in operations
+        for method, operation in operations.items()
     )
 
 
