@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import APIError
 from app.core.security import decode_access_token
 from app.db.session import get_db
-from app.models import Assessment, User
+from app.models import Assessment, AssessmentStatus, User
 from app.models.enums import IVALUE_ROLES, ORG_MANAGER_ROLES, UserRole
 
 bearer = HTTPBearer(auto_error=False)
@@ -74,6 +74,21 @@ def get_assessment(
         # of another tenant's record.
         raise APIError("assessment.not_found", status.HTTP_404_NOT_FOUND)
     return assessment
+
+
+def require_submitted(assessment: Assessment, user: User) -> None:
+    """Post-submission surfaces are closed while the questionnaire is still
+    being filled in.
+
+    Not a plain permission check: iValue staff deliberately keep access to a
+    draft, because a reviewer has to be able to look at an in-progress
+    assessment to help the customer finish it. Shared by the AI pipeline and the
+    report, which both read a snapshot that only means something once the
+    answers have stopped moving.
+    """
+    if assessment.status in (AssessmentStatus.DRAFT, AssessmentStatus.IN_PROGRESS):
+        if user.role not in IVALUE_ROLES:
+            raise APIError("assessment.not_submitted", status.HTTP_409_CONFLICT)
 
 
 def client_ip(request: Request) -> str | None:
