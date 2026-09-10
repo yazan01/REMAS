@@ -5,7 +5,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import client_ip, get_assessment, get_current_user, require_ivalue
-from app.api.routes.frameworks import current_published_version
 from app.core.errors import APIError
 from app.core.security import utcnow
 from app.db.session import get_db
@@ -30,7 +29,7 @@ from app.schemas import (
     ResponseOut,
     ScoringOut,
 )
-from app.services import assessment_service, audit
+from app.services import assessment_service, audit, framework_service
 
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 
@@ -96,7 +95,7 @@ def create_assessment(
         if version is None:
             raise APIError("framework.not_found", status.HTTP_404_NOT_FOUND)
     else:
-        version = current_published_version(db)
+        version = framework_service.current_published_version(db)
 
     valid_axis_ids = {a.id for a in version.axes}
     chosen = [a for a in payload.selected_axis_ids if a in valid_axis_ids]

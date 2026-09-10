@@ -28,7 +28,7 @@ from app.models import (
     User,
 )
 from app.models.enums import IVALUE_ROLES
-from app.services import assessment_service, audit
+from app.services import assessment_service, audit, entitlements
 
 router = APIRouter(tags=["governance"])
 
@@ -380,9 +380,7 @@ def request_session(
 ) -> dict:
     """The deep-dive layer includes an online meeting with an expert. The
     customer proposes slots; iValue confirms one."""
-    from app.api.routes.insights import require_feature
-
-    require_feature(assessment, "expert_review", user)
+    entitlements.require(assessment, entitlements.Feature.EXPERT_REVIEW, user)
 
     session = ExpertSession(
         assessment_id=assessment.id,

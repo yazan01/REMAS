@@ -9,7 +9,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.core.errors import APIError
 from app.db.session import get_db
+from app.services import framework_service
 from app.models.enums import ServiceLayer
 from app.schemas import LayerOut
 
@@ -105,11 +107,8 @@ def list_layers() -> list[LayerOut]:
 def framework_preview(db: Session = Depends(get_db)) -> dict:
     """Public preview for the landing page: pillar names, the maturity scale and
     the question count. Question wording stays behind authentication."""
-    from app.api.routes.frameworks import current_published_version
-    from app.core.errors import APIError
-
     try:
-        version = current_published_version(db)
+        version = framework_service.current_published_version(db)
     except APIError:
         return {"pillars": [], "levels": [], "question_count": 0}
 

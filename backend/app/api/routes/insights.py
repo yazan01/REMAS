@@ -34,25 +34,11 @@ from app.models import (
     User,
 )
 from app.models.enums import IVALUE_ROLES
-from app.services import audit, reporting
+from app.services import audit, entitlements, reporting
 from app.services.ai import pipeline
 
 router = APIRouter(tags=["insights"])
 log = logging.getLogger("remas.insights")
-
-
-def require_feature(assessment: Assessment, feature: str, user: User) -> None:
-    """Layer gating. iValue staff bypass it so they can prepare a report before
-    the customer's layer is upgraded."""
-    if user.role in IVALUE_ROLES:
-        return
-    allowed = settings.layer_features.get(assessment.layer, [])
-    if feature not in allowed:
-        raise APIError(
-            "layer.feature_not_included",
-            status.HTTP_402_PAYMENT_REQUIRED,
-            {"layer": assessment.layer, "feature": feature},
-        )
 
 
 def _require_submitted(assessment: Assessment, user: User) -> None:
@@ -83,9 +69,9 @@ def run_ai(
 
     stages = payload.stages or ["extract", "relevance", "analyse", "recommend"]
     if {"analyse", "recommend"} & set(stages):
-        require_feature(assessment, "ai_analysis", user)
+        entitlements.require(assessment, entitlements.Feature.AI_ANALYSIS, user)
     else:
-        require_feature(assessment, "evidence_ai_review", user)
+        entitlements.require(assessment, entitlements.Feature.EVIDENCE_AI_REVIEW, user)
     _require_submitted(assessment, user)
 
     job = pipeline.run(db, assessment, actor=user, stages=stages)
@@ -285,7 +271,7 @@ def get_roadmap(
     db: Session = Depends(get_db),
 ) -> dict:
     """FR-28 / FR-29 — initiatives grouped into the configured horizons."""
-    require_feature(assessment, "roadmap", user)
+    entitlements.require(assessment, entitlements.Feature.ROADMAP, user)
     horizons = list(
         db.scalars(
             select(RoadmapHorizon)
@@ -410,7 +396,7 @@ def report_html(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    require_feature(assessment, "pdf_report", user)
+    entitlements.require(assessment, entitlements.Feature.PDF_REPORT, user)
     _require_submitted(assessment, user)
     ctx = reporting.build_context(db, assessment, locale)
     return HTMLResponse(reporting.render_html(ctx))
@@ -426,7 +412,7 @@ def report_pdf(
 ) -> FileResponse:
     """Branded PDF, printed through headless Chromium so Arabic shaping and RTL
     come out correct (BRD section 9)."""
-    require_feature(assessment, "pdf_report", user)
+    entitlements.require(assessment, entitlements.Feature.PDF_REPORT, user)
     _require_submitted(assessment, user)
 
     ctx = reporting.build_context(db, assessment, locale)
@@ -555,6 +541,6 @@ def layer_features(assessment: Assessment = Depends(get_assessment)) -> dict:
     UI offers rather than the UI guessing."""
     return {
         "layer": assessment.layer,
-        "features": settings.layer_features.get(assessment.layer, []),
+        "features": entitlements.allowed(assessment.layer),
         "all_layers": settings.layer_features,
     }

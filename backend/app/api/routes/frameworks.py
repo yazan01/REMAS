@@ -8,6 +8,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.errors import APIError
 from app.db.session import get_db
+from app.services import framework_service
 from app.models import Axis, Framework, FrameworkVersion, Question, User
 from app.models.enums import FrameworkStatus
 from app.schemas import AxisOut, FrameworkVersionOut, QuestionOut
@@ -67,43 +68,6 @@ def _load(db: Session, version_id: str) -> FrameworkVersion:
     return version
 
 
-def current_published_version(db: Session, code: str | None = None) -> FrameworkVersion:
-    """The live version of one framework.
-
-    Several frameworks can be published at once (FR-32), so "current" is scoped
-    by framework code — defaulting to `settings.default_framework_code` — rather
-    than meaning "whichever was published last", which would silently swap the
-    questionnaire under customers the moment a second tool went live.
-    """
-
-    def _query(framework_code: str | None):
-        stmt = (
-            select(FrameworkVersion)
-            .join(Framework)
-            .where(
-                FrameworkVersion.status == FrameworkStatus.PUBLISHED,
-                Framework.is_active.is_(True),
-            )
-            .options(
-                selectinload(FrameworkVersion.axes).selectinload(Axis.questions),
-                selectinload(FrameworkVersion.maturity_levels),
-                selectinload(FrameworkVersion.framework),
-            )
-            .order_by(FrameworkVersion.published_at.desc())
-        )
-        if framework_code:
-            stmt = stmt.where(Framework.code == framework_code)
-        return db.scalars(stmt).first()
-
-    version = _query(code or settings.default_framework_code)
-    if version is None and code is None:
-        # A deployment that renamed its framework still gets a sensible answer.
-        version = _query(None)
-    if version is None:
-        raise APIError("framework.no_published_version", status.HTTP_404_NOT_FOUND)
-    return version
-
-
 @router.get("/current", response_model=FrameworkVersionOut)
 def get_current(
     with_questions: bool = Query(default=True),
@@ -111,7 +75,7 @@ def get_current(
     _user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> FrameworkVersionOut:
-    return _serialise(current_published_version(db, code), with_questions=with_questions)
+    return _serialise(framework_service.current_published_version(db, code), with_questions=with_questions)
 
 
 @router.get("/versions/{version_id}", response_model=FrameworkVersionOut)
