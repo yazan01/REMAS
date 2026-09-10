@@ -35,6 +35,7 @@ from app.models import (
 from app.models.initiatives import AIFinding, AIJob, Initiative, InitiativeTemplate, RoadmapHorizon
 from app.services import assessment_service
 from app.services.ai import extraction
+from app.services import evidence_store
 from app.services.ai import config as ai_config
 from app.services.ai.provider import PROMPT_VERSION, BaseProvider, RuleProvider, get_provider
 
@@ -75,12 +76,10 @@ def extract_document(db: Session, document: Document) -> dict[str, Any]:
     if document.extraction and not document.extraction.get("error"):
         return document.extraction
 
-    from app.api.routes.evidence import _read
-
     result = extraction.extract(
         document.stored_path,
         document.content_type,
-        loader=lambda: _read(document),
+        loader=lambda: evidence_store.read(document),
         ocr_config=ai_config.resolve(db),
     )
     document.extraction = result
