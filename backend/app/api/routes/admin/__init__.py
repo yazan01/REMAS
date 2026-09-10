@@ -11,6 +11,7 @@ so every URL is exactly what it was when this was one 1352-line module:
     tenants      customer organisations and the audit trail
     users        the user register across every tenant
     ai_settings  AI provider selection and its API key
+    report_templates  report sections, branding and output formats (FR-34)
 
 The version rule enforced throughout: a published version is immutable. Editing
 means cloning to a new draft, changing that, and publishing it — which is what
@@ -25,13 +26,23 @@ from app.api.routes.admin import (
     frameworks,
     importing,
     library,
+    report_templates,
     tenants,
     users,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-for _part in (frameworks, content, library, importing, tenants, users, ai_settings):
+for _part in (
+    frameworks,
+    content,
+    library,
+    importing,
+    tenants,
+    users,
+    ai_settings,
+    report_templates,
+):
     router.include_router(_part.router)
 
 __all__ = ["router"]
