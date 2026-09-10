@@ -161,12 +161,29 @@ def test_domain_does_not_depend_on_the_web_framework() -> None:
         assert forbidden not in source, f"scoring.py must not depend on {forbidden}"
 
 
-@pytest.mark.parametrize("limit,path", [(700, "api/routes/admin"), (600, "services")])
+@pytest.mark.parametrize(
+    "limit,path",
+    [(560, "api/routes"), (600, "services")],
+)
 def test_no_module_grows_past_a_reviewable_size(limit: int, path: str) -> None:
     """A file nobody will read in one sitting stops being reviewed.
 
     The limits are deliberately generous; they exist to catch a module quietly
     accumulating a second responsibility, not to enforce a style.
+
+    Two things were wrong before. The controller limit covered
+    `api/routes/admin` but not `api/routes` itself, so every top-level
+    controller was unguarded — and the limit was 700, which insights.py never
+    reached even at 546 lines and three unrelated domains. A guard that would
+    not have caught the drift it exists to catch is decoration.
+
+    The limit is now 560, just above `assessments.py` (541) — the largest module
+    that is genuinely one responsibility, the assessment lifecycle. It ratchets:
+    when that module shrinks, this number should follow it down.
+
+    Line count is a backstop, not the real mechanism. It cannot tell one long
+    domain from two short ones; only reading the module can. What it does
+    reliably is refuse to let a file grow past the point where anyone will.
     """
     target = APP / path
     files = (
