@@ -23,6 +23,7 @@ from app.core.security import (
     as_aware,
     create_access_token,
     hash_password,
+    log_delivery_token,
     new_token,
     utcnow,
     verify_password,
@@ -75,8 +76,9 @@ def request_password_reset(
             ip_address=client_ip(request),
         )
         db.commit()
-        # No mail transport yet; the token is logged so the flow is testable.
-        log.info("password reset token for %s: %s", user.email, user.reset_token)
+        # No mail transport yet; the token is logged so the flow is testable
+        # — in development only, see log_delivery_token.
+        log_delivery_token("password reset", user.email, user.reset_token)
     return {"status": "accepted"}
 
 
@@ -319,7 +321,7 @@ def create_invitation(
         ip_address=client_ip(request),
     )
     db.commit()
-    log.info("invitation token for %s: %s", invitation.email, invitation.token)
+    log_delivery_token("invitation", invitation.email, invitation.token)
     return InviteOut(
         id=invitation.id,
         email=invitation.email,

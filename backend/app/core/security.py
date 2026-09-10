@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -7,6 +9,8 @@ import bcrypt
 import jwt
 
 from app.core.config import settings
+
+log = logging.getLogger("remas.security")
 
 
 def hash_password(raw: str) -> str:
@@ -54,3 +58,22 @@ def as_aware(value: datetime | None) -> datetime | None:
     if value is None:
         return None
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def log_delivery_token(kind: str, recipient: str, token: str) -> None:
+    """Log a single-use token so an e-mail flow can be completed without a mail
+    server — in development only.
+
+    The guard is the point. These tokens are bearer credentials: a
+    password-reset token sitting in an aggregated production log is a full
+    account takeover for anyone who can read that log, and log readership is
+    almost always wider than database readership.
+
+    Outside development the value is withheld and the event is still recorded,
+    so an operator can see that a reset was requested without being handed the
+    means to complete it.
+    """
+    if settings.environment == "development":
+        log.info("%s token for %s: %s", kind, recipient, token)
+    else:
+        log.info("%s token issued for %s (value withheld)", kind, recipient)

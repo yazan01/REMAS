@@ -47,11 +47,20 @@ class BaseProvider:
         raise NotImplementedError
 
 
+#: Every outbound model call is bounded. The SDK defaults run to ten minutes,
+#: which in practice means one unreachable provider pins a worker for ten
+#: minutes and the request that triggered it never returns. Analysis is the
+#: slowest legitimate call, so it gets the widest window.
+ANALYSIS_TIMEOUT_SECONDS = 120.0
+
+
 class AnthropicProvider(BaseProvider):
     def __init__(self, api_key: str, model: str) -> None:
         import anthropic
 
-        self._client = anthropic.Anthropic(api_key=api_key)
+        self._client = anthropic.Anthropic(
+            api_key=api_key, timeout=ANALYSIS_TIMEOUT_SECONDS
+        )
         self.info = ProviderInfo(name="anthropic", model=model)
 
     def complete_json(self, system: str, user: str, max_tokens: int = 4000) -> Any:
@@ -76,7 +85,11 @@ class OpenAIProvider(BaseProvider):
     def __init__(self, api_key: str, model: str, base_url: str | None = None) -> None:
         from openai import OpenAI
 
-        self._client = OpenAI(api_key=api_key, base_url=base_url or None, timeout=120.0)
+        self._client = OpenAI(
+            api_key=api_key,
+            base_url=base_url or None,
+            timeout=ANALYSIS_TIMEOUT_SECONDS,
+        )
         self.info = ProviderInfo(name="openai", model=model)
 
     def complete_json(self, system: str, user: str, max_tokens: int = 4000) -> Any:

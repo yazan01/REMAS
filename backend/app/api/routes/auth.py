@@ -15,6 +15,7 @@ from app.core.security import (
     as_aware,
     create_access_token,
     hash_password,
+    log_delivery_token,
     new_token,
     utcnow,
     verify_password,
@@ -85,8 +86,8 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
     db.refresh(user)
 
     # No mail transport is wired yet; the link is logged so the flow is testable
-    # end to end in development.
-    log.info("verification token for %s: %s", user.email, user.verification_token)
+    # end to end — in development only, see log_delivery_token.
+    log_delivery_token("verification", user.email, user.verification_token)
     return user
 
 
