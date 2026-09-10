@@ -56,6 +56,80 @@ def _evidence_by_question(db: Session, assessment_id: str) -> dict[str, list[Doc
     return out
 
 
+def completion_for_many(
+    db: Session, assessments: list[Assessment]
+) -> dict[str, float]:
+    """Answered-fraction for a whole list, in two queries instead of eight each.
+
+    `progress()` is the detail computation: per-axis counts, missing evidence,
+    overdue items. A list view needs one number from it, and calling it per row
+    cost eight queries per assessment — measured at 10 for one assessment and 34
+    for four, i.e. linear growth on the customer's main dashboard endpoint.
+
+    This batches the *loading* and keeps the *logic*: the answered predicate is
+    still `Response.is_answered`, so a completion percentage computed here can
+    never drift from one computed by `progress()`. Translating that property
+    into SQL would have been faster still and is exactly how the two would have
+    silently disagreed.
+    """
+    if not assessments:
+        return {}
+
+    version_ids = {a.framework_version_id for a in assessments}
+    axis_rows = db.scalars(
+        select(Axis)
+        .where(Axis.framework_version_id.in_(version_ids))
+        .options(selectinload(Axis.questions))
+    )
+    questions_by_axis: dict[str, int] = {}
+    axes_by_version: dict[str, list[Axis]] = {}
+    for axis in axis_rows:
+        questions_by_axis[axis.id] = len(axis.questions)
+        axes_by_version.setdefault(axis.framework_version_id, []).append(axis)
+
+    assessment_ids = [a.id for a in assessments]
+    answered_by_assessment: dict[str, int] = {a.id: 0 for a in assessments}
+    for response in db.scalars(
+        select(Response).where(Response.assessment_id.in_(assessment_ids))
+    ):
+        if response.is_answered:
+            answered_by_assessment[response.assessment_id] = (
+                answered_by_assessment.get(response.assessment_id, 0) + 1
+            )
+
+    out: dict[str, float] = {}
+    for assessment in assessments:
+        axes = axes_by_version.get(assessment.framework_version_id, [])
+        chosen = set(assessment.selected_axis_ids or [])
+        if chosen:
+            axes = [a for a in axes if a.id in chosen]
+        total = sum(questions_by_axis.get(a.id, 0) for a in axes)
+        answered = answered_by_assessment.get(assessment.id, 0)
+        out[assessment.id] = round(answered / total, 4) if total else 0.0
+    return out
+
+
+def latest_runs_for_many(
+    db: Session, assessments: list[Assessment]
+) -> dict[str, ScoringRun]:
+    """The most recent scoring run per assessment, in one query.
+
+    Ordered oldest-first so the dictionary write for each assessment ends on the
+    newest row — the same answer as one `ORDER BY created_at DESC LIMIT 1` per
+    assessment, without the per-row round trip.
+    """
+    if not assessments:
+        return {}
+    runs: dict[str, ScoringRun] = {}
+    for run in db.scalars(
+        select(ScoringRun)
+        .where(ScoringRun.assessment_id.in_([a.id for a in assessments]))
+        .order_by(ScoringRun.created_at)
+    ):
+        runs[run.assessment_id] = run
+    return runs
+
+
 def build_inputs(db: Session, assessment: Assessment) -> list[scoring.AxisInput]:
     responses = _responses_by_question(db, assessment.id)
     evidence = _evidence_by_question(db, assessment.id)

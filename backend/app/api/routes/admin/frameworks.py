@@ -63,7 +63,23 @@ class ScoringConfigIn(BaseModel):
 
 @router.get("/frameworks", response_model=list[dict])
 def list_frameworks(_u: User = Depends(require_ivalue), db: Session = Depends(get_db)) -> list[dict]:
-    rows = db.scalars(select(Framework).order_by(Framework.created_at)).all()
+    """Every framework with its versions and their content counts.
+
+    The counts are what made this expensive: `len(v.axes)` and
+    `sum(len(a.questions) for a in v.axes)` each triggered a lazy load, so the
+    call cost one query per version plus one per axis — 20 queries for a single
+    16-axis framework, growing with every axis an administrator adds. Loading
+    the whole chain eagerly turns that into a fixed three.
+    """
+    rows = db.scalars(
+        select(Framework)
+        .order_by(Framework.created_at)
+        .options(
+            selectinload(Framework.versions)
+            .selectinload(FrameworkVersion.axes)
+            .selectinload(Axis.questions)
+        )
+    ).all()
     out = []
     for framework in rows:
         out.append(

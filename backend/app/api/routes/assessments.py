@@ -42,9 +42,9 @@ def _latest_run(db: Session, assessment_id: str) -> ScoringRun | None:
     ).first()
 
 
-def _summary(db: Session, assessment: Assessment) -> AssessmentSummary:
-    run = _latest_run(db, assessment.id)
-    progress = assessment_service.progress(db, assessment)
+def _build_summary(
+    assessment: Assessment, completion: float, run: ScoringRun | None
+) -> AssessmentSummary:
     return AssessmentSummary(
         id=assessment.id,
         name=assessment.name,
@@ -54,10 +54,30 @@ def _summary(db: Session, assessment: Assessment) -> AssessmentSummary:
         created_at=assessment.created_at,
         submitted_at=assessment.submitted_at,
         framework_version_id=assessment.framework_version_id,
-        completion=progress["completion"],
+        completion=completion,
         overall_score=run.overall_score if run else None,
         maturity_level=run.maturity_level if run else None,
     )
+
+
+def _summary(db: Session, assessment: Assessment) -> AssessmentSummary:
+    """One assessment. The list endpoint uses `_summaries` instead — calling
+    this in a loop is what made GET /assessments cost eight queries a row."""
+    return _build_summary(
+        assessment,
+        assessment_service.progress(db, assessment)["completion"],
+        _latest_run(db, assessment.id),
+    )
+
+
+def _summaries(db: Session, assessments: list[Assessment]) -> list[AssessmentSummary]:
+    """A whole list, in a fixed number of queries regardless of its length."""
+    completion = assessment_service.completion_for_many(db, assessments)
+    runs = assessment_service.latest_runs_for_many(db, assessments)
+    return [
+        _build_summary(a, completion.get(a.id, 0.0), runs.get(a.id))
+        for a in assessments
+    ]
 
 
 def _question_ids(db: Session, assessment: Assessment) -> set[str]:
@@ -80,7 +100,7 @@ def list_assessments(
     stmt = select(Assessment).order_by(Assessment.created_at.desc())
     if user.role not in IVALUE_ROLES:
         stmt = stmt.where(Assessment.organization_id == user.organization_id)
-    return [_summary(db, a) for a in db.scalars(stmt)]
+    return _summaries(db, list(db.scalars(stmt)))
 
 
 @router.post("", response_model=AssessmentDetail, status_code=status.HTTP_201_CREATED)
