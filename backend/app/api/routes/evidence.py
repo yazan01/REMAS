@@ -151,6 +151,34 @@ async def upload_document(
     return document
 
 
+def _serve(document: Document, disposition: str) -> Response:
+    """Hand a stored evidence file back to the browser.
+
+    The headers are the point. These bytes came from a customer upload, and the
+    content type beside them is whatever that customer's browser declared at
+    upload time — it is metadata, not a fact about the file. So a document can
+    always be bytes of one kind wearing the label of another.
+
+    `nosniff` is what makes that harmless: without it a browser is free to
+    disregard the declared type, sniff the content, and decide a file labelled
+    image/png is really HTML — which it would then execute on this API's own
+    origin, with the reviewer's session attached. With it, the declared type is
+    the only type, and mislabelled bytes render as broken rather than as script.
+
+    The `preview` route is the one that needs this, because it serves inline;
+    `download` sends the same header anyway rather than making the safety of a
+    response depend on which handler happened to build it.
+    """
+    return Response(
+        content=evidence_store.read(document),
+        media_type=document.content_type,
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{document.filename}"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/documents/{document_id}/download")
 def download_document(
     document_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -158,11 +186,7 @@ def download_document(
     document = _load_document(db, document_id, user)
     if not evidence_store.exists(document):
         raise APIError("document.not_found", status.HTTP_404_NOT_FOUND)
-    return Response(
-        content=evidence_store.read(document),
-        media_type=document.content_type,
-        headers={"Content-Disposition": f'attachment; filename="{document.filename}"'},
-    )
+    return _serve(document, "attachment")
 
 
 @router.get("/documents/{document_id}/preview")
@@ -176,11 +200,7 @@ def preview_document(
         raise APIError("document.not_previewable", status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
     if not evidence_store.exists(document):
         raise APIError("document.not_found", status.HTTP_404_NOT_FOUND)
-    return Response(
-        content=evidence_store.read(document),
-        media_type=document.content_type,
-        headers={"Content-Disposition": f'inline; filename="{document.filename}"'},
-    )
+    return _serve(document, "inline")
 
 
 @router.patch("/documents/{document_id}", response_model=DocumentOut)

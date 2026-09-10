@@ -316,3 +316,33 @@ def test_branding_ramp_still_overrides_the_default() -> None:
     # rather than through the stylesheet, so it is not asserted here.
     assert all(colour in css for colour in custom[:4])
     assert RAMP[0] not in css, "a custom ramp must replace the default, not merge with it"
+
+
+# ── regression: the document must not depend on the network ────────────────
+
+
+def test_report_requests_no_remote_resources(renderer, context) -> None:
+    """The report used to `<link>` its fonts from fonts.googleapis.com, and
+    `render_pdf` waited for `networkidle` before printing.
+
+    Measured with that host intercepted: reachable 1.28s and correct; refused
+    0.61s and silently in the wrong face; egress blackholed 30.08s and then a
+    TimeoutError that took the PDF with it. `release_report` calls `render_pdf`
+    unguarded, so the last case was a bare 500 on the final deliverable.
+
+    Any remote `src`/`href` reintroduces that dependency, so the assertion is on
+    the rendered document rather than on the one tag that used to carry it.
+    """
+    import re
+
+    html = renderer.render_html(context)
+    remote = re.findall(r'(?:src|href)\s*=\s*"(https?://[^"]+)"', html)
+    assert not remote, f"the report fetches remote resources: {remote}"
+
+
+def test_report_embeds_its_typefaces(renderer, context) -> None:
+    """Both scripts must be present: the Arabic faces and the Latin ones. A
+    report that embeds only Arabic renders the English edition in a fallback."""
+    html = renderer.render_html(context)
+    assert "data:font/woff2;base64," in html, "no font is embedded in the document"
+    assert "U+0600" in html, "no embedded face claims the Arabic block"

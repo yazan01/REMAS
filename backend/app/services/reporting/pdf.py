@@ -25,7 +25,16 @@ def render_pdf(html_text: str, out_path: Path) -> Path:
         browser = p.chromium.launch()
         try:
             page = browser.new_page()
-            page.set_content(html_text, wait_until="networkidle")
+            # `load`, not `networkidle`. The document carries its fonts inline
+            # and requests nothing over the network, so there is no idle state
+            # worth waiting for — and waiting for one is what made this hang.
+            # Measured against a blackholed font host, `networkidle` stalled 30s
+            # and then raised, taking the report with it.
+            page.set_content(html_text, wait_until="load")
+            # Fonts are data URIs, so this resolves without I/O. It is here so
+            # the print cannot start mid-swap and lay out Arabic in a fallback
+            # face on a slow host.
+            page.evaluate("() => document.fonts.ready")
             page.pdf(
                 path=str(out_path),
                 format="A4",

@@ -86,6 +86,16 @@ def readiness() -> dict:
         "on" if settings.encrypt_evidence and settings.evidence_master_key else "off"
     )
 
+    # The report bundles its own typefaces so it never reaches the network to
+    # render. A deployment that lost them still produces a PDF — in whatever
+    # face the host happens to have — so the probe reports it rather than
+    # letting a customer be the one who notices.
+    from app.services.reporting import fonts as report_fonts
+
+    checks["report_fonts"] = "ok" if report_fonts.available() else "missing"
+    if not report_fonts.available():
+        ready = False
+
     from app.db.session import SessionLocal
     from app.services.ai import config as ai_config, ocr
     from app.services.ai.provider import build

@@ -18,6 +18,7 @@ import html
 import math
 from typing import Any
 
+from app.services.reporting.fonts import face_css
 from app.services.reporting.styles import RAMP, render_stylesheet
 
 T = {
@@ -303,8 +304,7 @@ def render_html(ctx: dict[str, Any]) -> str:
     # ── cover ──────────────────────────────────────────────────────────────
     out = [f"""<!doctype html><html lang="{locale}" dir="{'rtl' if rtl else 'ltr'}"><head>
 <meta charset="utf-8"><title>{_esc(t['report_title'])}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Readex+Pro:wght@400;500;600&display=swap">
+<style>{face_css()}</style>
 <style>{render_stylesheet(rtl, brand)}</style></head><body>
 
 <section class="cover">
