@@ -121,7 +121,17 @@ def extract(
     if loader is not None:
         import tempfile
 
-        data = loader()
+        try:
+            data = loader()
+        except Exception as exc:  # noqa: BLE001 - one bad file must not stop the run
+            # The commonest cause is a key-lifecycle event: the evidence master
+            # key was rotated, or a backup was restored under a different one.
+            # It is reported per document, like `file_missing` above, because
+            # the pipeline processes a whole assessment — letting it escape
+            # would abandon every other document over one unreadable file.
+            log.warning("could not load %s: %s", file_path.name, type(exc).__name__)
+            result["error"] = f"unreadable: {type(exc).__name__}"
+            return result
         handle = tempfile.NamedTemporaryFile(
             delete=False, suffix=file_path.suffix or ".bin"
         )

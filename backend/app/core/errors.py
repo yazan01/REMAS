@@ -53,6 +53,13 @@ MESSAGES: dict[str, tuple[str, str]] = {
     ),
     "response.score_required": ("يجب اختيار درجة أو تحديد «غير منطبق».", "Choose a score or mark the question not applicable."),
     "document.not_found": ("المستند غير موجود.", "Document not found."),
+    "document.undecryptable": (
+        "تعذّر فك تشفير هذا المستند بالمفتاح الحالي. غالباً جرى تدوير مفتاح "
+        "التشفير أو استُعيدت نسخة احتياطية بمفتاح آخر. تواصل مع مسؤول النظام.",
+        "This document cannot be decrypted with the current key. The evidence "
+        "master key was most likely rotated, or a backup was restored with a "
+        "different one. Contact your system administrator.",
+    ),
     "document.too_large": ("حجم الملف يتجاوز الحد المسموح.", "The file exceeds the maximum allowed size."),
     "document.unsupported_type": (
         "نوع الملف غير مدعوم. المسموح: PDF، DOCX، XLSX، PPTX، PNG، JPG.",

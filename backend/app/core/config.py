@@ -142,8 +142,15 @@ def get_settings() -> Settings:
         ).decode()
 
     if settings.encrypt_evidence and not settings.evidence_master_key:
-        # Development convenience: a stable per-machine key so uploads survive
-        # a restart, with a loud warning that it is not a managed secret.
+        # Development convenience so the stack runs with no secret store. The
+        # key is `os.urandom` and is NOT persisted, so every restart gets a new
+        # one and evidence written by a previous run can no longer be decrypted
+        # — the download route reports that as `document.undecryptable`.
+        #
+        # This comment used to claim the key was "stable per-machine" and that
+        # uploads "survive a restart". Both were false, and the warning
+        # immediately below already contradicted it. Set EVIDENCE_MASTER_KEY
+        # (or EVIDENCE_MASTER_KEY_FILE) locally if you want uploads to persist.
         settings.evidence_master_key = generate_master_key()
         log.warning(
             "EVIDENCE_MASTER_KEY not set — generated an ephemeral development key. "

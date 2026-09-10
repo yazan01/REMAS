@@ -109,3 +109,46 @@ def test_declared_content_type_is_echoed_not_re_sniffed(client, owner, mislabell
     type *without* nosniff is the combination that is dangerous."""
     res = client.get(f"{API}/documents/{mislabelled_document['id']}/preview", headers=owner)
     assert res.headers["content-type"].startswith("image/png")
+
+
+# ── regression: a wrong key must not surface as a bare 500 ──────────────────
+
+
+def test_undecryptable_evidence_reports_a_bilingual_error(client, owner, mislabelled_document, monkeypatch):
+    """Found by running the app, not by reading it.
+
+    A document uploaded under one evidence master key and read back under
+    another raised `cryptography.exceptions.InvalidTag` straight through the
+    HTTP layer: a 500 with a `text/plain` body, no error code, and nothing the
+    bilingual client could render. It says "we broke", which sends the wrong
+    person looking — the file is intact and this is an operator key event with
+    a known cause and a known fix.
+
+    Reproduced here the way it happens in production: rotate the key between
+    the write and the read.
+    """
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "evidence_master_key", "a-completely-different-key")
+
+    res = client.get(f"{API}/documents/{mislabelled_document['id']}/download", headers=owner)
+
+    assert res.status_code == 409, f"expected a handled conflict, got {res.status_code}"
+    body = res.json()
+    assert body["code"] == "document.undecryptable"
+    assert body["message_ar"] and body["message_en"], "both languages must be present"
+
+
+def test_a_wrong_key_is_distinguishable_from_a_missing_file(client, owner, mislabelled_document, monkeypatch):
+    """404 and 409 mean different things to an operator: one is "the file is
+    gone", the other is "the file is here and the key is wrong". Collapsing
+    them would send someone hunting for a lost upload that never moved."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "evidence_master_key", "yet-another-wrong-key")
+    wrong_key = client.get(f"{API}/documents/{mislabelled_document['id']}/download", headers=owner)
+
+    missing = client.get(f"{API}/documents/does-not-exist/download", headers=owner)
+
+    assert wrong_key.status_code == 409
+    assert missing.status_code == 404

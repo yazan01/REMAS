@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile, status
@@ -17,6 +19,7 @@ from app.schemas import DocumentOut, EvidenceLinkIn, EvidenceLinkOut, EvidenceSt
 from app.services import audit, evidence_store
 
 router = APIRouter(tags=["evidence"])
+log = logging.getLogger("remas.evidence")
 
 # Rendered inline in the browser; anything else is downloaded (FR-16 preview).
 PREVIEWABLE = {"application/pdf", "image/png", "image/jpeg"}
@@ -169,8 +172,18 @@ def _serve(document: Document, disposition: str) -> Response:
     `download` sends the same header anyway rather than making the safety of a
     response depend on which handler happened to build it.
     """
+    try:
+        content = evidence_store.read(document)
+    except evidence_store.UndecryptableEvidence as exc:
+        # The file is present and intact; this process simply does not hold the
+        # key that sealed it. A 500 would say "we broke", which sends the wrong
+        # person looking — this is an operator action with a known cause.
+        log.error("evidence %s cannot be decrypted with the current key", document.id)
+        raise APIError(
+            "document.undecryptable", status.HTTP_409_CONFLICT
+        ) from exc
     return Response(
-        content=evidence_store.read(document),
+        content=content,
         media_type=document.content_type,
         headers={
             "Content-Disposition": f'{disposition}; filename="{document.filename}"',
