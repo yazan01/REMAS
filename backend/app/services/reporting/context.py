@@ -18,7 +18,7 @@ from app.models import Assessment, FrameworkVersion, Organization, ScoringRun
 from app.models.governance import ReportTemplate
 from app.models.initiatives import AIFinding, Initiative, RoadmapHorizon
 from app.services import assessment_service
-from app.services.reporting.renderer import RAMP, T
+from app.services.reporting.renderer import T
 
 log = logging.getLogger("remas.reporting")
 

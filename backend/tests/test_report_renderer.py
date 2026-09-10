@@ -273,3 +273,46 @@ def test_the_brand_palette_reaches_the_document(renderer, context) -> None:
     context["branding"]["primary"] = "#123456"
     html = renderer.render_html(context)
     assert "#123456" in html
+
+
+# ── regression: the stylesheet fell back to an undefined name ───────────────
+
+
+def test_stylesheet_renders_without_any_branding() -> None:
+    """`render_stylesheet` declares `brand: dict | None = None`, so calling it
+    with no branding is part of its contract.
+
+    It used to raise `NameError` instead: the maturity ramp constant lived in
+    `renderer`, and `styles` referenced it without importing it. The `or RAMP`
+    fallback short-circuited whenever branding carried a ramp — which
+    `DEFAULT_BRANDING` does — so every ordinary report hid the fault, and it
+    only surfaced on a template whose branding omitted or nulled `ramp`.
+    """
+    from app.services.reporting.styles import RAMP, render_stylesheet
+
+    css = render_stylesheet(rtl=True, brand=None)
+    # RAMP[0], not RAMP[4]: the top of the ramp is the same colour as the
+    # default primary, so asserting on it would pass even if the ramp never
+    # reached the sheet.
+    assert RAMP[0] in css, "the default ramp must reach the stylesheet"
+
+
+def test_stylesheet_falls_back_when_branding_omits_the_ramp() -> None:
+    """The exact shape that used to crash: branding present, `ramp` missing."""
+    from app.services.reporting.styles import RAMP, render_stylesheet
+
+    css = render_stylesheet(rtl=False, brand={"primary": "#123456"})
+    assert "#123456" in css
+    assert RAMP[0] in css
+
+
+def test_branding_ramp_still_overrides_the_default() -> None:
+    """FR-34: iValue restyles the report through configuration, not code."""
+    from app.services.reporting.styles import RAMP, render_stylesheet
+
+    custom = ["#111111", "#222222", "#333333", "#444444", "#555555"]
+    css = render_stylesheet(rtl=True, brand={"ramp": custom})
+    # The sheet consumes $M1..$M4; level 5 is applied inline by the renderer
+    # rather than through the stylesheet, so it is not asserted here.
+    assert all(colour in css for colour in custom[:4])
+    assert RAMP[0] not in css, "a custom ramp must replace the default, not merge with it"

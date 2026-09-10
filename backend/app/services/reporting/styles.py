@@ -12,6 +12,12 @@ an f-string would need every one of them doubled.
 
 from __future__ import annotations
 
+#: The maturity ramp, level 1 → 5. It lives here because it is a palette, and
+#: the palette belongs with the stylesheet: `render_stylesheet` falls back to it
+#: whenever a report template's branding does not override `ramp`.
+RAMP = ["#c9d2db", "#9db4cc", "#6d8fb2", "#426b95", "#1e3a5c"]
+
+
 def render_stylesheet(rtl: bool, brand: dict | None = None) -> str:
     """The stylesheet is a template: branding tokens are substituted, so a
     change in the report template restyles the PDF with no code change

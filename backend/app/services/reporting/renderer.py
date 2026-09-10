@@ -18,7 +18,7 @@ import html
 import math
 from typing import Any
 
-from app.services.reporting.styles import render_stylesheet
+from app.services.reporting.styles import RAMP, render_stylesheet
 
 T = {
     "ar": {
@@ -125,7 +125,6 @@ T = {
     },
 }
 
-RAMP = ["#c9d2db", "#9db4cc", "#6d8fb2", "#426b95", "#1e3a5c"]
 
 
 SECTION_TITLE_KEY = {
