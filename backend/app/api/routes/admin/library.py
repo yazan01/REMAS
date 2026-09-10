@@ -6,7 +6,7 @@ how long it spans, and which ready-made initiatives apply to which score band.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session

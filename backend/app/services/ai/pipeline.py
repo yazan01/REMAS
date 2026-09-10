@@ -289,7 +289,7 @@ def analyse(
     result = assessment_service.calculate(db, assessment)
     axes = {a.id: a for a in assessment_service.selected_axes(db, assessment)}
 
-    from app.models import FrameworkVersion, MaturityLevel
+    from app.models import FrameworkVersion
 
     version = db.get(FrameworkVersion, assessment.framework_version_id)
     level_labels = {

@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
-from app.core.config import settings
 from app.core.errors import APIError
 from app.db.session import get_db
 from app.services import framework_service
-from app.models import Axis, Framework, FrameworkVersion, Question, User
-from app.models.enums import FrameworkStatus
+from app.models import Axis, FrameworkVersion, Question, User
 from app.schemas import AxisOut, FrameworkVersionOut, QuestionOut
 
 router = APIRouter(prefix="/frameworks", tags=["frameworks"])
