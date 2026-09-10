@@ -34,6 +34,7 @@ from app.models.governance import (
     ExpertSession,
     ReportTemplate,
 )
+from app.models.settings import PLATFORM_SCOPE, PlatformSetting
 from app.models.tenancy import Organization, User
 
 __all__ = [
@@ -61,6 +62,8 @@ __all__ = [
     "Locale",
     "MaturityLevel",
     "Organization",
+    "PLATFORM_SCOPE",
+    "PlatformSetting",
     "Question",
     "ReportRender",
     "Response",

@@ -4,9 +4,11 @@ the administration portal, the AI pipeline, initiatives/roadmap and reporting.""
 from __future__ import annotations
 
 import io
+import json
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.db.base import Base
@@ -743,3 +745,146 @@ def test_horizons_can_be_read_before_they_are_rewritten(client, admin):
     horizons = res.json()
     assert horizons and horizons == sorted(horizons, key=lambda h: h["order_index"])
     assert {"code", "name_ar", "name_en", "months_from", "months_to"} <= set(horizons[0])
+
+
+# ─────────────── AI provider configuration from the portal (FR-31) ──────────
+
+
+def _ai(client, admin) -> dict:
+    res = client.get(f"{API}/admin/settings/ai", headers=admin)
+    assert res.status_code == 200, res.text
+    return res.json()
+
+
+def test_ai_defaults_to_the_deterministic_engine(client, admin):
+    state = _ai(client, admin)
+    assert state["provider"] == "rules"
+    assert state["effective_provider"] == "rules"
+    assert state["openai_key_hint"] is None
+    assert "openai" in state["providers"] and "anthropic" in state["providers"]
+    assert "openai" in state["ocr_providers"]
+
+
+def test_openai_key_is_stored_sealed_and_never_returned(client, admin):
+    key = "sk-proj-" + "A" * 32 + "WXYZ"
+    res = client.put(
+        f"{API}/admin/settings/ai",
+        json={"provider": "openai", "api_key": key},
+        headers=admin,
+    )
+    assert res.status_code == 200, res.text
+    state = res.json()
+
+    assert state["provider"] == "openai"
+    # Switching provider without naming a model must not leave Claude's id behind.
+    assert state["model"] == "gpt-4o"
+    assert state["key_present"] is True
+    assert state["openai_key_hint"] == "…WXYZ"
+    # The key must not appear anywhere in the response, at any nesting depth.
+    assert key not in json.dumps(state)
+
+    # …nor in the table, in the clear.
+    from app.models.settings import PlatformSetting
+
+    with SessionLocal() as db:
+        row = db.scalar(
+            select(PlatformSetting).where(PlatformSetting.key == "ai.openai_api_key")
+        )
+        assert row is not None
+        assert row.value is None
+        assert key.encode() not in bytes(row.secret)
+        assert bytes(row.secret).startswith(b"REMAS")
+
+    # …nor in the audit trail.
+    audit = client.get(f"{API}/admin/audit?q=ai_settings", headers=admin).json()
+    assert key not in json.dumps(audit)
+
+
+def test_saved_key_is_resolved_by_the_pipeline_config(client, admin):
+    """The portal write and the runtime read must agree — that is the whole
+    point of routing both through one resolver."""
+    from app.services import settings_store
+    from app.services.ai import config as ai_config
+
+    with SessionLocal() as db:
+        settings_store.invalidate()
+        cfg = ai_config.resolve(db)
+        assert cfg.provider == "openai"
+        assert cfg.api_key and cfg.api_key.endswith("WXYZ")
+        assert cfg.usable is True
+
+
+def test_omitting_the_key_keeps_it(client, admin):
+    before = _ai(client, admin)["openai_key_hint"]
+    res = client.put(f"{API}/admin/settings/ai", json={"model": "gpt-4o-mini"}, headers=admin)
+    assert res.status_code == 200
+    assert res.json()["model"] == "gpt-4o-mini"
+    assert res.json()["openai_key_hint"] == before
+
+
+def test_ocr_can_be_pointed_at_the_vision_model(client, admin):
+    res = client.put(
+        f"{API}/admin/settings/ai",
+        json={"ocr_provider": "openai", "ocr_model": "gpt-4o"},
+        headers=admin,
+    )
+    assert res.status_code == 200
+    state = res.json()
+    assert state["ocr_provider"] == "openai"
+    # A key is configured, so this selection is actually reachable.
+    assert state["ocr_effective"] == "openai"
+
+    from app.services import settings_store
+    from app.services.ai import config as ai_config, ocr as ocr_engine
+
+    with SessionLocal() as db:
+        settings_store.invalidate()
+        assert ocr_engine.available_provider(ai_config.resolve(db)) == "openai"
+
+
+def test_unknown_provider_is_rejected(client, admin):
+    res = client.put(f"{API}/admin/settings/ai", json={"provider": "gemini"}, headers=admin)
+    assert res.status_code == 422
+    assert res.json()["code"] == "ai.unknown_provider"
+
+
+def test_reviewer_may_read_but_not_change_the_ai_configuration(client, reviewer):
+    assert client.get(f"{API}/admin/settings/ai", headers=reviewer).status_code == 200
+    res = client.put(f"{API}/admin/settings/ai", json={"provider": "rules"}, headers=reviewer)
+    assert res.status_code == 403
+    assert client.post(f"{API}/admin/settings/ai/test", headers=reviewer).status_code == 403
+
+
+def test_clearing_the_key_falls_back_to_the_deterministic_engine(client, admin):
+    res = client.put(
+        f"{API}/admin/settings/ai", json={"api_key": "", "provider": "openai"}, headers=admin
+    )
+    assert res.status_code == 200
+    state = res.json()
+    assert state["openai_key_hint"] is None
+    assert state["key_present"] is False
+    # Selected but unusable: the platform must say so rather than look configured.
+    assert state["effective_provider"] == "rules"
+
+    # And the connectivity probe reports the reason rather than raising.
+    probe = client.post(f"{API}/admin/settings/ai/test", headers=admin).json()
+    assert probe["ok"] is False
+    assert probe["detail"] == "no_api_key"
+
+    client.put(f"{API}/admin/settings/ai", json={"provider": "rules"}, headers=admin)
+    assert client.post(f"{API}/admin/settings/ai/test", headers=admin).json()["ok"] is True
+
+
+def test_scoring_never_depends_on_the_provider(client, admin):
+    """FR-26 — switching the model must not move a score."""
+    from app.services.ai import config as ai_config
+    from app.services.ai.provider import RuleProvider, build
+
+    for provider in ("rules", "openai"):
+        cfg = ai_config.AIConfig(
+            provider=provider, model=None, api_key=None, base_url=None,
+            enabled=True, ocr_provider="none", ocr_model="gpt-4o",
+        )
+        # No key: every provider degrades to the deterministic engine, so the
+        # pipeline still produces a complete, traceable result.
+        assert isinstance(build(cfg), RuleProvider)

@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # AI pipeline. With no key the pipeline still runs on its deterministic
     # provider — see services/ai/provider.py.
     anthropic_api_key: str | None = None
+    openai_api_key: str | None = None
+    # Set only to reach an OpenAI-compatible gateway (Azure OpenAI, a proxy).
+    openai_base_url: str | None = None
     ai_model: str = "claude-sonnet-5"
     ai_enabled: bool = True
 
@@ -72,7 +75,7 @@ class Settings(BaseSettings):
     encrypt_evidence: bool = True
 
     # ── OCR for scanned documents (AI-01 / AI-07) ──────────────────────────
-    ocr_provider: str = "auto"  # auto | tesseract | azure | none
+    ocr_provider: str = "auto"  # auto | tesseract | azure | openai | none
     ocr_languages: str = "ara+eng"
     ocr_min_confidence: float = 0.6
     # Second gate: the engine's confidence is unreliable on degraded Arabic, so
@@ -101,6 +104,7 @@ def get_settings() -> Settings:
         ("jwt_secret", "JWT_SECRET"),
         ("evidence_master_key", "EVIDENCE_MASTER_KEY"),
         ("anthropic_api_key", "ANTHROPIC_API_KEY"),
+        ("openai_api_key", "OPENAI_API_KEY"),
         ("ocr_api_key", "OCR_API_KEY"),
         ("database_url", "DATABASE_URL"),
     ):

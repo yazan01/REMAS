@@ -4,6 +4,7 @@ cryptography==50.0.1
 email-validator==2.2.0
 fastapi==0.141.1
 httpx==0.28.1
+openai==2.9.0
 openpyxl==3.1.5
 pillow==12.3.0
 playwright==1.49.1

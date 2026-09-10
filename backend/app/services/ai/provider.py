@@ -1,9 +1,10 @@
 """LLM provider abstraction for the analysis stages (AI-02 → AI-06).
 
-Two providers ship:
+Three providers ship:
 
-* ``AnthropicProvider`` — used when ``ANTHROPIC_API_KEY`` is configured. Sends
-  the assessment's own data and asks for structured JSON back.
+* ``OpenAIProvider`` — selected from the administration portal, where the
+  API key is entered and stored encrypted. Asks for a JSON object back.
+* ``AnthropicProvider`` — the same contract against Claude.
 * ``RuleProvider`` — the default. Produces the same shaped output from the
   deterministic scoring result and the extracted document text, with no network
   call at all.
@@ -23,7 +24,10 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.services.ai import config as ai_config
 
 log = logging.getLogger("remas.ai.provider")
 
@@ -61,6 +65,37 @@ class AnthropicProvider(BaseProvider):
         return _parse_json(text)
 
 
+class OpenAIProvider(BaseProvider):
+    """Chat Completions in JSON mode.
+
+    `response_format=json_object` is what makes this safe to parse: without it
+    the model is free to wrap the object in prose, and a stage that cannot parse
+    its answer silently degrades to the rule output.
+    """
+
+    def __init__(self, api_key: str, model: str, base_url: str | None = None) -> None:
+        from openai import OpenAI
+
+        self._client = OpenAI(api_key=api_key, base_url=base_url or None, timeout=120.0)
+        self.info = ProviderInfo(name="openai", model=model)
+
+    def complete_json(self, system: str, user: str, max_tokens: int = 4000) -> Any:
+        response = self._client.chat.completions.create(
+            model=self.info.model or ai_config.DEFAULT_OPENAI_MODEL,
+            max_completion_tokens=max_tokens,
+            response_format={"type": "json_object"},
+            messages=[
+                # JSON mode requires the word "json" to appear in the prompt.
+                {
+                    "role": "system",
+                    "content": system + "\n\nRespond with a single JSON object.",
+                },
+                {"role": "user", "content": user},
+            ],
+        )
+        return _parse_json(response.choices[0].message.content or "")
+
+
 class RuleProvider(BaseProvider):
     """No network. The pipeline supplies pre-computed structures and this
     provider passes them through, so every stage still produces real, traceable
@@ -92,11 +127,25 @@ def _parse_json(text: str) -> Any:
     return None
 
 
-def get_provider() -> BaseProvider:
-    key = (settings.anthropic_api_key or "").strip()
-    if key:
-        try:
-            return AnthropicProvider(key, settings.ai_model)
-        except Exception as exc:  # noqa: BLE001
-            log.warning("Anthropic provider unavailable (%s) — falling back to rules", exc)
+def build(cfg: ai_config.AIConfig) -> BaseProvider:
+    """Instantiate the configured provider, or the rule provider if it cannot be
+    reached. A missing key is a configuration state, not an error: the pipeline
+    still has to produce a full, traceable result (FR-26)."""
+    if not cfg.usable or cfg.provider == "rules":
+        return RuleProvider()
+    try:
+        if cfg.provider == "openai":
+            return OpenAIProvider(
+                cfg.api_key or "", cfg.model or ai_config.DEFAULT_OPENAI_MODEL, cfg.base_url
+            )
+        if cfg.provider == "anthropic":
+            return AnthropicProvider(
+                cfg.api_key or "", cfg.model or ai_config.DEFAULT_ANTHROPIC_MODEL
+            )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("%s provider unavailable (%s) — falling back to rules", cfg.provider, exc)
     return RuleProvider()
+
+
+def get_provider(db: Session | None = None) -> BaseProvider:
+    return build(ai_config.resolve(db))

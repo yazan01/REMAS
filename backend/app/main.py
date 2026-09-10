@@ -86,11 +86,21 @@ def readiness() -> dict:
         "on" if settings.encrypt_evidence and settings.evidence_master_key else "off"
     )
 
-    from app.services.ai import ocr
-    from app.services.ai.provider import get_provider
+    from app.db.session import SessionLocal
+    from app.services.ai import config as ai_config, ocr
+    from app.services.ai.provider import build
 
-    checks["ai_provider"] = get_provider().info.name
-    checks["ocr_provider"] = ocr.available_provider() or "none"
+    # Read through the stored configuration, so the probe reports the provider
+    # the administrator actually selected rather than the container's default.
+    try:
+        with SessionLocal() as db:
+            cfg = ai_config.resolve(db)
+    except Exception:  # noqa: BLE001 - the database check above already failed
+        cfg = ai_config.resolve(None)
+
+    checks["ai_provider"] = build(cfg).info.name
+    checks["ai_model"] = cfg.model or "-"
+    checks["ocr_provider"] = ocr.available_provider(cfg) or "none"
 
     return {"status": "ready" if ready else "degraded", "checks": checks}
 

@@ -89,12 +89,15 @@ IMAGE_TYPES = {"image/png", "image/jpeg"}
 
 
 def extract(
-    path: str | Path, content_type: str, *, loader=None
+    path: str | Path, content_type: str, *, loader=None, ocr_config=None
 ) -> dict[str, Any]:
     """Returns {pages, text, char_count, ocr_required, ocr, language_hint, meta, error}.
 
     `loader` lets the caller hand over decrypted bytes; evidence is encrypted at
     rest, so the extractor must not assume it can read the file directly.
+
+    `ocr_config` is the resolved AI configuration, so a scanned page is read by
+    whichever engine the administrator selected in the portal.
     """
     file_path = Path(path)
     result: dict[str, Any] = {
@@ -128,17 +131,19 @@ def extract(
         working = temp
 
     try:
-        return _extract_from(working, content_type, result)
+        return _extract_from(working, content_type, result, ocr_config)
     finally:
         if temp is not None:
             temp.unlink(missing_ok=True)
 
 
-def _extract_from(file_path: Path, content_type: str, result: dict[str, Any]) -> dict[str, Any]:
+def _extract_from(
+    file_path: Path, content_type: str, result: dict[str, Any], ocr_config=None
+) -> dict[str, Any]:
     if content_type in IMAGE_TYPES:
         # No text layer exists in an image by definition — this is OCR's job.
         result["meta"] = {"kind": "image"}
-        return _apply_ocr(file_path, content_type, result)
+        return _apply_ocr(file_path, content_type, result, ocr_config)
 
     extractor = EXTRACTORS.get(content_type)
     if extractor is None:
@@ -161,17 +166,19 @@ def _extract_from(file_path: Path, content_type: str, result: dict[str, Any]) ->
 
     # A PDF that yields almost nothing is a scan, not an empty document.
     if content_type == "application/pdf" and len(text) < TEXT_MIN_CHARS:
-        return _apply_ocr(file_path, content_type, result)
+        return _apply_ocr(file_path, content_type, result, ocr_config)
     return result
 
 
-def _apply_ocr(file_path: Path, content_type: str, result: dict[str, Any]) -> dict[str, Any]:
+def _apply_ocr(
+    file_path: Path, content_type: str, result: dict[str, Any], ocr_config=None
+) -> dict[str, Any]:
     """AI-01 for scanned documents. When no OCR provider is configured the
     document is flagged rather than silently reported as empty — an empty
     extraction would make the coverage stage call good evidence 'missing'."""
     from app.services.ai import ocr as ocr_engine
 
-    outcome = ocr_engine.run(file_path, content_type)
+    outcome = ocr_engine.run(file_path, content_type, ocr_config)
     result["ocr"] = {
         "engine": outcome.get("engine"),
         "confidence": outcome.get("confidence"),

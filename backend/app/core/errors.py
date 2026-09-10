@@ -104,6 +104,11 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "لا يمكن معاينة هذا النوع من الملفات — استخدم التحميل.",
         "This file type cannot be previewed; download it instead.",
     ),
+    "ai.unknown_provider": ("مزوّد ذكاء اصطناعي غير معروف.", "Unknown AI provider."),
+    "ai.no_master_key": (
+        "لا يمكن حفظ المفتاح: مفتاح التشفير الرئيسي غير مُعدّ على الخادم.",
+        "The key cannot be stored: the server has no encryption master key configured.",
+    ),
     "auth.user_not_found": ("المستخدم غير موجود.", "User not found."),
     "auth.unknown_role": ("دور غير معروف.", "Unknown role."),
     "auth.cannot_demote_self": (

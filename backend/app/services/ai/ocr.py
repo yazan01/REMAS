@@ -42,6 +42,12 @@ def _empty(engine: str, error: str | None = None) -> OCRResult:
 # ─────────────────────────────── tesseract ──────────────────────────────────
 
 
+#: A vision model is billed per page; a runaway 400-page scan must not turn
+#: one upload into a four-figure invoice.
+OPENAI_MAX_PAGES = 20
+
+PAGE_SEPARATOR = "\n\n"
+
 DEFAULT_TESSERACT_PATHS = (
     "C:/Program Files/Tesseract-OCR/tesseract.exe",
     "C:/Program Files (x86)/Tesseract-OCR/tesseract.exe",
@@ -238,6 +244,87 @@ def _azure(path: Path, content_type: str) -> OCRResult:
     return _empty("azure", "timeout")
 
 
+# ─────────────────────────── vision-model OCR ───────────────────────────────
+
+
+OPENAI_OCR_SYSTEM = (
+    "You transcribe scanned documents. Return the text exactly as it appears, "
+    "preserving line breaks, Arabic orthography and diacritics, numbers and "
+    "punctuation. Do not translate, summarise, correct or comment. If a page is "
+    "blank or unreadable, return an empty string for it."
+)
+
+
+def _encode_image(image) -> str:
+    """PNG data URI. PNG rather than JPEG because the text is line art: JPEG
+    ringing around Arabic glyphs costs more accuracy than the bytes save."""
+    import base64
+    from io import BytesIO
+
+    buffer = BytesIO()
+    image.convert("RGB").save(buffer, format="PNG", optimize=True)
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode()
+
+
+def _openai(path: Path, content_type: str, cfg=None) -> OCRResult:
+    """Read a scan with a vision model (AI-01, and AI-07 for Arabic).
+
+    One honest caveat, carried through to the result: the model returns no
+    per-word confidence, so `confidence` is None and only the plausibility gate
+    can reject the page. That gate is the one that actually caught bad Arabic in
+    the benchmark, so the reading stays guarded — but the engine-confidence gate
+    does not apply here, and the UI says so.
+    """
+    from openai import OpenAI
+    from PIL import Image
+
+    from app.services.ai import config as ai_config
+
+    key = (cfg.api_key if cfg and cfg.api_key else None) or ai_config.openai_key()
+    if not key:
+        return _empty("openai", "no_api_key")
+
+    if content_type in ("image/png", "image/jpeg"):
+        images = [Image.open(path)]
+    elif content_type == "application/pdf":
+        images = _rasterise_pdf(path)
+        if not images:
+            return _empty("openai", "pdf_rasterisation_unavailable")
+    else:
+        return _empty("openai", "unsupported_type")
+
+    model = (cfg.ocr_model if cfg else None) or ai_config.DEFAULT_OPENAI_OCR_MODEL
+    base_url = (cfg.base_url if cfg else None) or settings.openai_base_url
+    client = OpenAI(api_key=key, base_url=base_url or None, timeout=180.0)
+
+    pages: list[dict[str, Any]] = []
+    for index, image in enumerate(images[:OPENAI_MAX_PAGES], start=1):
+        response = client.chat.completions.create(
+            model=model,
+            max_completion_tokens=4000,
+            messages=[
+                {"role": "system", "content": OPENAI_OCR_SYSTEM},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Transcribe this page."},
+                        {"type": "image_url", "image_url": {"url": _encode_image(preprocess(image))}},
+                    ],
+                },
+            ],
+        )
+        text = (response.choices[0].message.content or "").strip()
+        pages.append({"page": index, "text": text, "confidence": None})
+
+    return OCRResult(
+        engine=f"openai:{model}",
+        pages=pages,
+        text=PAGE_SEPARATOR.join(p["text"] for p in pages if p["text"]),
+        confidence=None,
+        error=None,
+    )
+
+
 def _rasterise_pdf(path: Path) -> list:
     """Render an image-only PDF to page images. pypdf can pull the embedded
     images out without a separate poppler install, which keeps the deployment
@@ -268,18 +355,37 @@ def _mean(values: list) -> float | None:
 
 # ────────────────────────────── orchestration ───────────────────────────────
 
-PROVIDERS = {"tesseract": _tesseract, "azure": _azure}
+PROVIDERS = {"tesseract": _tesseract, "azure": _azure, "openai": _openai}
 
 
-def available_provider() -> str | None:
-    """Which provider this deployment can actually use, right now."""
-    configured = (settings.ocr_provider or "auto").lower()
+def available_provider(cfg=None) -> str | None:
+    """Which provider this deployment can actually use, right now.
+
+    `cfg` is the resolved AI configuration when a database session was
+    available; without one this falls back to the environment, which is what
+    the readiness probe and the offline benchmark script see.
+    """
+    from app.services.ai import config as ai_config
+
+    configured = (cfg.ocr_provider if cfg else None) or (settings.ocr_provider or "auto")
+    configured = configured.lower()
+
     if configured == "none":
         return None
-    if configured == "azure" or (configured == "auto" and settings.ocr_api_key):
+    if configured == "openai":
+        key = (cfg.api_key if cfg and cfg.provider == "openai" else None) or ai_config.openai_key()
+        return "openai" if key else None
+    if configured == "azure":
         return "azure" if settings.ocr_api_key and settings.ocr_endpoint else None
-    if configured in ("tesseract", "auto"):
+    if configured == "tesseract":
         return "tesseract" if _tesseract_available() else None
+    if configured == "auto":
+        # Local first: it costs nothing and sends no client evidence off-site.
+        if _tesseract_available():
+            return "tesseract"
+        if settings.ocr_api_key and settings.ocr_endpoint:
+            return "azure"
+        return "openai" if ai_config.openai_key() else None
     return None
 
 
@@ -324,12 +430,15 @@ def plausibility(text: str) -> float:
     return round(max(0.0, min(score, 1.0)), 3)
 
 
-def run(path: str | Path, content_type: str) -> OCRResult:
-    provider = available_provider()
+def run(path: str | Path, content_type: str, cfg=None) -> OCRResult:
+    provider = available_provider(cfg)
     if provider is None:
         return _empty("none", "no_provider_configured")
     try:
-        result = PROVIDERS[provider](Path(path), content_type)
+        if provider == "openai":
+            result = _openai(Path(path), content_type, cfg)
+        else:
+            result = PROVIDERS[provider](Path(path), content_type)
     except Exception as exc:  # noqa: BLE001 - OCR must never break an upload
         log.warning("OCR failed via %s: %s", provider, exc)
         return _empty(provider, f"{type(exc).__name__}")

@@ -35,6 +35,7 @@ from app.models import (
 from app.models.initiatives import AIFinding, AIJob, Initiative, InitiativeTemplate, RoadmapHorizon
 from app.services import assessment_service
 from app.services.ai import extraction
+from app.services.ai import config as ai_config
 from app.services.ai.provider import PROMPT_VERSION, BaseProvider, RuleProvider, get_provider
 
 log = logging.getLogger("remas.ai.pipeline")
@@ -80,6 +81,7 @@ def extract_document(db: Session, document: Document) -> dict[str, Any]:
         document.stored_path,
         document.content_type,
         loader=lambda: _read(document),
+        ocr_config=ai_config.resolve(db),
     )
     document.extraction = result
     db.flush()
@@ -520,7 +522,7 @@ def run(
 ) -> AIJob:
     """Run the pipeline end to end and record it as one auditable job."""
     wanted = set(stages or ["extract", "relevance", "analyse", "recommend"])
-    provider = get_provider()
+    provider = get_provider(db)
 
     job = AIJob(
         assessment_id=assessment.id,

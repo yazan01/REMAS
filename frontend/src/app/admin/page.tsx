@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ErrorNote, Loading } from "@/components/AuthShell";
+import { AISettings } from "@/components/admin/AISettings";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { ContentEditor } from "@/components/admin/ContentEditor";
 import { ReportTemplates } from "@/components/ReportTemplates";
@@ -20,8 +21,23 @@ import {
 import { useRequireSession } from "@/lib/session";
 
 const IVALUE_ROLES = new Set(["ivalue_admin", "ivalue_reviewer"]);
-type Tab = "frameworks" | "content" | "templates" | "organizations" | "users" | "audit";
-const TABS: Tab[] = ["frameworks", "content", "templates", "organizations", "users", "audit"];
+type Tab =
+  | "frameworks"
+  | "content"
+  | "templates"
+  | "organizations"
+  | "users"
+  | "ai"
+  | "audit";
+const TABS: Tab[] = [
+  "frameworks",
+  "content",
+  "templates",
+  "organizations",
+  "users",
+  "ai",
+  "audit",
+];
 
 export default function AdminPage() {
   const { t, pick, locale, num } = useLocale();
@@ -66,7 +82,9 @@ export default function AdminPage() {
                 ? t("template.title")
                 : key === "users"
                   ? t("admin.usersTab")
-                  : t(`admin.${key}` as MessageKey)}
+                  : key === "ai"
+                    ? t("aiset.title")
+                    : t(`admin.${key}` as MessageKey)}
             </button>
           ))}
         </nav>
@@ -85,6 +103,9 @@ export default function AdminPage() {
         {tab === "organizations" && <Organizations onError={setError} />}
         {tab === "users" && (
           <AdminUsers onError={setError} canWrite={me.user.role === "ivalue_admin"} />
+        )}
+        {tab === "ai" && (
+          <AISettings onError={setError} canWrite={me.user.role === "ivalue_admin"} />
         )}
         {tab === "audit" && <AuditLog onError={setError} />}
       </div>

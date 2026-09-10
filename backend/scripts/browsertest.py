@@ -162,6 +162,7 @@ def run_engine(playwright, engine: str, shots: Path | None) -> dict:
             ("قوالب التقارير", None),
             ("المنشآت", "demo-developer"),
             ("المستخدمون", "admin@ivalueconsult.com"),
+            ("الذكاء الاصطناعي", "مزوّد التحليل"),
             ("سجل التدقيق", None),
         ):
             page.get_by_role("button", name=label, exact=True).first.click()
@@ -181,6 +182,24 @@ def run_engine(playwright, engine: str, shots: Path | None) -> dict:
         # empty leftover draft instead.
         note(question_rows >= 5, "content editor lists questions", f"{question_rows} rows")
 
+        # The AI screen must never render the stored key, only its hint, and it
+        # has to say which provider is *actually* in use.
+        page.get_by_role("button", name="الذكاء الاصطناعي", exact=True).first.click()
+        page.wait_for_timeout(900)
+        ai_html = page.content()
+        note("المزوّد الفعلي" in ai_html, "AI settings shows the effective provider")
+        password_fields = page.evaluate(
+            "() => document.querySelectorAll('input[type=password]').length"
+        )
+        selects = page.evaluate("() => document.querySelectorAll('select').length")
+        note(selects >= 2, "AI settings renders provider and OCR selectors", f"{selects} selects")
+        note(
+            "sk-" not in ai_html or password_fields > 0,
+            "no API key rendered in the page",
+        )
+
+        page.get_by_role("button", name="المحتوى", exact=True).first.click()
+        page.wait_for_timeout(900)
         for sub in ("مستويات النضج", "قواعد الاحتساب", "آفاق خارطة الطريق", "مكتبة المبادرات"):
             page.get_by_role("button", name=sub, exact=True).first.click()
             page.wait_for_timeout(700)

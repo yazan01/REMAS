@@ -416,6 +416,36 @@ export type AdminFramework = {
   }>;
 };
 
+export type AISettings = {
+  provider: string;
+  model: string | null;
+  enabled: boolean;
+  base_url: string | null;
+  ocr_provider: string;
+  ocr_model: string | null;
+  /** The engine an upload would actually be read by right now. */
+  ocr_effective: string;
+  providers: string[];
+  ocr_providers: string[];
+  default_models: Record<string, string>;
+  /** Last four characters only — the key itself never leaves the server. */
+  openai_key_hint: string | null;
+  anthropic_key_hint: string | null;
+  openai_key_from_env: boolean;
+  anthropic_key_from_env: boolean;
+  key_present: boolean;
+  effective_provider: string;
+  secrets_encrypted: boolean;
+};
+
+export type AITestResult = {
+  ok: boolean;
+  provider: string;
+  model: string | null;
+  detail: string;
+  latency_ms: number | null;
+};
+
 export type AdminUser = {
   id: string;
   email: string;
